@@ -4,7 +4,7 @@ import { createUser, getAllUsers, getUserById, updateUserById, deleteUserById } 
 export const UserRouter = new Hono();
 
 // Create a new client
-UserRouter.post('/', createUser);
+UserRouter.post('/', ...createUser);
 
 // Get a client by ID
 UserRouter.get('/:id', getUserById);
