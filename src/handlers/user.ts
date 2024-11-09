@@ -1,19 +1,33 @@
 import { createFactory } from "hono/factory";
+import { validator } from "hono/validator";
 import { Client } from "../types/client";
 import { createClient, getAllClients, getClientById, updateClient, deleteClient } from "../database";
 
 const factory = createFactory();
 
-export const createUser = factory.createHandlers(async (c) => {
-    const body = await c.req.json<Client>();
+export const createUser = factory.createHandlers(validator('json', (value, c) => {
+    // const body = value['body']
+    console.log(value);
 
-    if (!body.clientName || !body.clientEmail) {
+    if (!value.clientName || typeof value.clientName !== 'string') {
+        return c.text('Name must be a string', 400)
+    }
+
+    if (!value.clientName || !value.clientEmail) {
         return c.json({ message: 'Missing name or email' }, 400);
     }
 
-    const newClient = await createClient(body);
+    return value
+}), async (c) => {
+    const body = await c.req.valid('json');
+
+    // if (!body.clientName || !body.clientEmail) {
+    //     return c.json({ message: 'Missing name or email' }, 400);
+    // }
+
+    const newClient = await createClient(body as unknown as Client);
     return c.json(newClient, 201);
-})[0];
+});
 
 export const getAllUsers = factory.createHandlers(async (c) => {
     const clients = await getAllClients();

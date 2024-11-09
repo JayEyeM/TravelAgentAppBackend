@@ -1,10 +1,12 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import { logger } from 'hono/logger'
 import { UserRouter } from './routers/user';
-import { getAllClients, saveClients } from './database'; // Import saveClients and getAllClients
 
 const app = new Hono();
-const port = 4000;
+const port = parseInt(process.env.PORT ?? '8000');
+
+app.use('*', logger());
 
 app.route('/clients', UserRouter);
 
@@ -14,11 +16,7 @@ serve({
   port,
 });
 
-// Ensure clients are saved on shutdown
-process.on('SIGINT', async () => {
-  console.log('Saving clients and shutting down...');
-  const clients = await getAllClients(); 
-  await saveClients(clients); 
-  console.log('Clients saved successfully.');
-  process.exit();
-});
+
+/**
+ * App makes request -> router -> middleware -> handler -> middleware -> router -> app
+ */
