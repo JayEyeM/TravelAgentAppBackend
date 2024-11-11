@@ -1,0 +1,73 @@
+[
+  {
+    "clientId": 1,
+    "travelDate": 1723958400,
+    "clientFinalPaymentDate": 1723958400,
+    "supplierFinalPaymentDate": 1723958400,
+    "bookingDate": 1723958400,
+    "invoicedDate": 1723958400,
+    "confirmations": [
+      {
+        "confirmationNumber": "CONF12345",
+        "supplier": "Airline Inc."
+      }
+    ],
+    "people": [
+      {
+        "name": "Jane Doe",
+        "dateOfBirth": 946684800
+      }
+    ],
+    "mailingAddress": "123 Travel St, Adventure City",
+    "phoneNumbers": [
+      "123-456-7890"
+    ],
+    "emailAddresses": [
+      "jane.doe@example.com"
+    ],
+    "significantDates": [
+      1723958400
+    ],
+    "bookingId": "BKNG123456",
+    "id": 1
+  },
+  {
+    "clientId": 2,
+    "travelDate": 1735680000,
+    "clientFinalPaymentDate": 1733097600,
+    "supplierFinalPaymentDate": 1731628800,
+    "bookingDate": 1731264000,
+    "invoicedDate": 1730486400,
+    "confirmations": [
+      {
+        "confirmationNumber": "CONF67890",
+        "supplier": "Hotel Resort"
+      }
+    ],
+    "people": [
+      {
+        "name": "John Smith",
+        "dateOfBirth": 946684800
+      },
+      {
+        "name": "Alice Johnson",
+        "dateOfBirth": 978307200
+      }
+    ],
+    "mailingAddress": "456 Vacation Rd, Getaway City",
+    "phoneNumbers": [
+      "555-987-6543",
+      "555-123-4567"
+    ],
+    "emailAddresses": [
+      "john.smith@example.com",
+      "alice.johnson@example.com"
+    ],
+    "significantDates": [
+      1735680000,
+      1733097600
+    ],
+    "bookingId": "BKNG678901",
+    "id": 2
+  }
+]
