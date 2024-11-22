@@ -27,7 +27,7 @@ export const createBookingHandler = factory.createHandlers(validator('json', (va
 export const getAllBookingsHandler = factory.createHandlers(async (c) => {
     const bookings = await getAllBookings();
     return c.json(bookings);
-})[0];
+});
 
 // Get a booking by ID
 export const getBookingByIdHandler = factory.createHandlers(async (c) => {
@@ -43,7 +43,7 @@ export const getBookingByIdHandler = factory.createHandlers(async (c) => {
     }
 
     return c.json(booking);
-})[0];
+});
 
 // Update a booking by ID
 export const updateBookingByIdHandler = factory.createHandlers(async (c) => {
@@ -62,7 +62,7 @@ export const updateBookingByIdHandler = factory.createHandlers(async (c) => {
     const updatedBookingData = { ...existingBooking, ...body };
     const updatedBooking = await updateBooking(updatedBookingData);
     return c.json(updatedBooking);
-})[0];
+});
 
 // Delete a booking by ID
 export const deleteBookingByIdHandler = factory.createHandlers(async (c) => {
@@ -78,4 +78,4 @@ export const deleteBookingByIdHandler = factory.createHandlers(async (c) => {
     }
 
     return c.json({ message: 'Booking deleted successfully' });
-})[0];
+});

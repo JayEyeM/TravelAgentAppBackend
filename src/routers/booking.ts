@@ -3,8 +3,9 @@ import { createBookingHandler, getAllBookingsHandler, getBookingByIdHandler, upd
 
 export const BookingRouter = new Hono();
 
-BookingRouter.post('/', ...createBookingHandler);
-BookingRouter.get('/', getAllBookingsHandler);
-BookingRouter.get('/:id', getBookingByIdHandler);
-BookingRouter.patch('/:id', updateBookingByIdHandler);
-BookingRouter.delete('/:id', deleteBookingByIdHandler);
+BookingRouter
+    .post('/', ...createBookingHandler)
+    .get('/', ...getAllBookingsHandler)
+    .get('/:id', ...getBookingByIdHandler)
+    .patch('/:id', ...updateBookingByIdHandler)
+    .delete('/:id', ...deleteBookingByIdHandler)
