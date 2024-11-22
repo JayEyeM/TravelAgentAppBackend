@@ -29,10 +29,11 @@ export const createUser = factory.createHandlers(validator('json', (value, c) =>
     return c.json(newClient, 201);
 });
 
+
 export const getAllUsers = factory.createHandlers(async (c) => {
     const clients = await getAllClients();
     return c.json(clients);
-})[0];
+});
 
 export const getUserById = factory.createHandlers(async (c) => {
     const id = parseInt(c.req.param('id'), 10);
@@ -47,7 +48,7 @@ export const getUserById = factory.createHandlers(async (c) => {
     }
 
     return c.json(client);
-})[0];
+});
 
 // Update a client by ID
 export const updateUserById = factory.createHandlers(async (c) => {
@@ -58,15 +59,53 @@ export const updateUserById = factory.createHandlers(async (c) => {
         return c.json({ message: 'Invalid client ID' }, 400);
     }
 
-    const existingClient = await getClientById(id);
-    if (!existingClient) {
+    // const existingClient = await getClientById(id);
+    // if (!existingClient) {
+    //     return c.json({ message: 'Client not found' }, 404);
+    // }
+
+    /**
+     * 
+     * rescurisvely merge two objects together
+     * 
+     * const original = {
+     *  name: 'bob',
+     *  age: 50,
+     *  billing: {
+     *    address: 'town'
+     *    postalCode: 'code' 
+     *  }
+     * }
+     * 
+     * const requestBody = {
+     *  age: 60,
+     *  billing: {
+     *    postalCode: 'A1A1A1'
+     *  }
+     * }
+     * 
+     * 
+     * const updated = {
+     *   name: 'bob',
+     *   age: 60,
+     *   billing: {
+     *     address: 'town'
+     *     postalCode: 'A1A1A1
+     *   }
+     * }
+     * 
+     * 
+     * 
+     */
+
+    const updatedClient = await updateClient(id as number, body);
+
+    if (!updatedClient) {
         return c.json({ message: 'Client not found' }, 404);
     }
 
-    const updatedClientData = { ...existingClient, ...body };
-    const updatedClient = await updateClient(updatedClientData);
     return c.json(updatedClient);
-})[0];
+});
 
 // Delete a client by ID
 export const deleteUserById = factory.createHandlers(async (c) => {
@@ -82,4 +121,4 @@ export const deleteUserById = factory.createHandlers(async (c) => {
     }
 
     return c.json({ message: 'Client deleted successfully' });
-})[0];
+});

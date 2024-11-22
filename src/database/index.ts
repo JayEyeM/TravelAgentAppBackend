@@ -43,11 +43,14 @@ export async function createClient(client: Client): Promise<Client> {
   return client;
 }
 
-export async function updateClient(updatedClient: Client): Promise<Client | null> {
+export async function updateClient(clientId: number, updatedClient: Client): Promise<Client | null> {
   const clients = await readClients();
-  const clientIndex = clients.findIndex(client => client.id === updatedClient.id);
+  const clientIndex = clients.findIndex(client => client.id === clientId);
+
   if (clientIndex === -1) return null;
+
   clients[clientIndex] = { ...clients[clientIndex], ...updatedClient };
+
   await saveClients(clients);
   return clients[clientIndex];
 }
