@@ -36,19 +36,24 @@ export const getAllUsers = factory.createHandlers(async (c) => {
 });
 
 export const getUserById = factory.createHandlers(async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-
-    if (isNaN(id)) {
+    try {
+      const id = parseInt(c.req.param('id'), 10);
+      if (isNaN(id)) {
         return c.json({ message: 'Invalid client ID' }, 400);
-    }
-
-    const client = await getClientById(id);
-    if (!client) {
+      }
+  
+      const client = await getClientById(id);
+      if (!client) {
         return c.json({ message: 'Client not found' }, 404);
+      }
+  
+      return c.json(client);
+    } catch (error) {
+      console.error('Error fetching client:', error);
+      return c.json({ message: 'An error occurred' }, 500);
     }
-
-    return c.json(client);
-});
+  });
+  
 
 // Update a client by ID
 export const updateUserById = factory.createHandlers(async (c) => {
@@ -98,7 +103,7 @@ export const updateUserById = factory.createHandlers(async (c) => {
      * 
      */
 
-    const updatedClient = await updateClient(id as number, body);
+    const updatedClient = await updateClient(id as number, body as Required<Partial<Client>>);
 
     if (!updatedClient) {
         return c.json({ message: 'Client not found' }, 404);
