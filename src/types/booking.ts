@@ -24,4 +24,10 @@ export interface Booking {
     emailAddresses: Email[];
     significantDates: UnixTimestamp[];
     bookingId: string;
-  }
+    amount: number;
+    notes: string;
+    invoiced: boolean;
+    paid: boolean;
+    paymentDate: UnixTimestamp;
+    dateCreated: UnixTimestamp;
+}
