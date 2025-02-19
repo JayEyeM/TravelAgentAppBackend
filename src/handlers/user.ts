@@ -10,14 +10,14 @@ export const createUser = factory.createHandlers(validator('json', (value, c) =>
     console.log(value);
 
     if (!value.clientName || typeof value.clientName !== 'string') {
-        return c.text('Name must be a string', 400)
+        return c.text('Name must be a string', 400);
     }
 
     if (!value.clientName || !value.clientEmail) {
         return c.json({ message: 'Missing name or email' }, 400);
     }
 
-    return value
+    return value;
 }), async (c) => {
     const body = await c.req.valid('json');
 
@@ -29,7 +29,6 @@ export const createUser = factory.createHandlers(validator('json', (value, c) =>
     return c.json(newClient, 201);
 });
 
-
 export const getAllUsers = factory.createHandlers(async (c) => {
     const clients = await getAllClients();
     return c.json(clients);
@@ -37,93 +36,102 @@ export const getAllUsers = factory.createHandlers(async (c) => {
 
 export const getUserById = factory.createHandlers(async (c) => {
     try {
-      const id = parseInt(c.req.param('id'), 10);
-      if (isNaN(id)) {
-        return c.json({ message: 'Invalid client ID' }, 400);
-      }
-  
-      const client = await getClientById(id);
-      if (!client) {
-        return c.json({ message: 'Client not found' }, 404);
-      }
-  
-      return c.json(client);
+        const id = parseInt(c.req.param('id'), 10);
+        if (isNaN(id)) {
+            return c.json({ message: 'Invalid client ID' }, 400);
+        }
+
+        const client = await getClientById(id);
+        if (!client) {
+            return c.json({ message: 'Client not found' }, 404);
+        }
+
+        return c.json(client);
     } catch (error) {
-      console.error('Error fetching client:', error);
-      return c.json({ message: 'An error occurred' }, 500);
+        console.error('Error fetching client:', error);
+        return c.json({ message: 'An error occurred' }, 500);
     }
-  });
-  
+});
 
 // Update a client by ID
 export const updateUserById = factory.createHandlers(async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-    const body = await c.req.json<Partial<Client>>();
+    try {
+        const id = parseInt(c.req.param('id'), 10);
+        const body = await c.req.json<Partial<Client>>();
 
-    if (isNaN(id)) {
-        return c.json({ message: 'Invalid client ID' }, 400);
+        if (isNaN(id)) {
+            return c.json({ message: 'Invalid client ID' }, 400);
+        }
+
+        // const existingClient = await getClientById(id);
+        // if (!existingClient) {
+        //     return c.json({ message: 'Client not found' }, 404);
+        // }
+
+        /**
+         * 
+         * rescurisvely merge two objects together
+         * 
+         * const original = {
+         *  name: 'bob',
+         *  age: 50,
+         *  billing: {
+         *    address: 'town'
+         *    postalCode: 'code' 
+         *  }
+         * }
+         * 
+         * const requestBody = {
+         *  age: 60,
+         *  billing: {
+         *    postalCode: 'A1A1A1'
+         *  }
+         * }
+         * 
+         * 
+         * const updated = {
+         *   name: 'bob',
+         *   age: 60,
+         *   billing: {
+         *     address: 'town'
+         *     postalCode: 'A1A1A1'
+         *   }
+         * }
+         * 
+         * 
+         * 
+         */
+
+        const updatedClient = await updateClient(id as number, body as Required<Partial<Client>>);
+
+        if (!updatedClient) {
+            return c.json({ message: 'Client not found' }, 404);
+        }
+
+        return c.json(updatedClient);
+    } catch (error) {
+        console.error('Error updating client:', error);
+        return c.json({ message: 'An error occurred' }, 500);
     }
-
-    // const existingClient = await getClientById(id);
-    // if (!existingClient) {
-    //     return c.json({ message: 'Client not found' }, 404);
-    // }
-
-    /**
-     * 
-     * rescurisvely merge two objects together
-     * 
-     * const original = {
-     *  name: 'bob',
-     *  age: 50,
-     *  billing: {
-     *    address: 'town'
-     *    postalCode: 'code' 
-     *  }
-     * }
-     * 
-     * const requestBody = {
-     *  age: 60,
-     *  billing: {
-     *    postalCode: 'A1A1A1'
-     *  }
-     * }
-     * 
-     * 
-     * const updated = {
-     *   name: 'bob',
-     *   age: 60,
-     *   billing: {
-     *     address: 'town'
-     *     postalCode: 'A1A1A1
-     *   }
-     * }
-     * 
-     * 
-     * 
-     */
-
-    const updatedClient = await updateClient(id as number, body as Required<Partial<Client>>);
-
-    if (!updatedClient) {
-        return c.json({ message: 'Client not found' }, 404);
-    }
-
-    return c.json(updatedClient);
 });
 
 // Delete a client by ID
 export const deleteUserById = factory.createHandlers(async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
+    try {
+        const id = parseInt(c.req.param('id'), 10);
 
-    if (isNaN(id)) {
-        return c.json({ message: 'Invalid client ID' }, 400);
+        if (isNaN(id)) {
+            return c.json({ message: 'Invalid client ID' }, 400);
+        }
+
+        const deleted = await deleteClient(id);
+        if (!deleted) {
+            return c.json({ message: 'Client not found' }, 404);
+        }
+
+        return c.json({ message: 'Client deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting client:', error);
+        return c.json({ message: 'An error occurred' }, 500);
     }
-
-    const deleted = await deleteClient(id);
-    if (!deleted) {
-        return c.json({ message: 'Client not found' }, 404);
-    }
-
-    return c.json({ message: 'Client deleted successfully' });
 });
