@@ -1,29 +1,46 @@
 import { Email, UnixTimestamp } from "./client";
 
 export interface Confirmation {
+    id: number;   // Primary Key (PK)
+    bookingId: number;  // Foreign Key (FK) referencing Booking.id
     confirmationNumber: string;
     supplier: string;
 }
 
-export interface PeopleDetails {
+export interface PersonDetail {  // Changed from PeopleDetails (Singular form is better)
+    id: number;   // Primary Key (PK)
+    bookingId: number;  // Foreign Key (FK) referencing Booking.id
     name: string;
     dateOfBirth: UnixTimestamp;
 }
 
+export interface SignificantDate {
+    id: number;   // Primary Key (PK)
+    bookingId: number;  // Foreign Key (FK) referencing Booking.id
+    date: UnixTimestamp;
+}
+
+export interface EmailAddress {
+    id: number;   // Primary Key (PK)
+    bookingId: number;  // Foreign Key (FK) referencing Booking.id
+    email: Email;
+}
+
+export interface PhoneNumber {
+    id: number;   // Primary Key (PK)
+    bookingId: number;  // Foreign Key (FK) referencing Booking.id
+    phone: string;
+}
+
 export interface Booking {
-    id: number;
+    id: number;  // Primary Key (PK)
+    clientId: number;   // Foreign Key (FK) referencing Client.id
     travelDate: UnixTimestamp;
     clientFinalPaymentDate: UnixTimestamp;
     supplierFinalPaymentDate: UnixTimestamp;
     bookingDate: UnixTimestamp;
     invoicedDate: UnixTimestamp;
-    confirmations: Confirmation[];
-    people: PeopleDetails[];
-    mailingAddress: string;
-    phoneNumbers: string[];
-    emailAddresses: Email[];
-    significantDates: UnixTimestamp[];
-    bookingId: string;
+    referenceCode: string;  // Changed from bookingId to avoid confusion
     amount: number;
     notes: string;
     invoiced: boolean;
