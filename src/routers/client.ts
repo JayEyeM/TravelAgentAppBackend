@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { createUser, getAllUsers, getUserById, updateUserById, deleteUserById } from "../handlers/user";
+import { createUser, getAllUsers, getUserById, updateUserById, deleteUserById } from "../handlers/client";
 
 export const UserRouter = new Hono();
 
