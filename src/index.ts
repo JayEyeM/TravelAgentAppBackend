@@ -13,28 +13,32 @@ import { getCookie } from 'hono/cookie';
 const app = new Hono();
 const port = parseInt(process.env.PORT ?? '8000');
 
-const Authorize= async (c:any, next:any) => {
-  const token = getCookie(c,'session');
-  console.log("Token:", token);
-  await next();
-}
+// Authorization Middleware
+const Authorize = async (c: any, next: any) => {
+  const token = getCookie(c, 'session');
 
-app.use('*', Authorize);
+  if (!token) {
+    return c.json({ error: "Unauthorized: No session cookie" }, 401);
+  }
+
+  console.log("Session Active:", token);
+  await next();
+};
+
 app.use('*', logger());
 app.use('*', cors({
-  origin: 'localhost:5173',
+  origin: 'http://localhost:5173',  
+  credentials: true,  // Allows cookies to be sent
   allowHeaders: ['*'],
 }));
+
+// Protect all routes except auth
+app.use('/clients', Authorize);
+app.use('/bookings', Authorize);
 
 app.route('/clients', UserRouter);
 app.route('/bookings', BookingRouter);
 app.route('/auth', authRoutes);
 
 console.log(`Server is running on port ${port}`);
-console.log("Supabase URL:", process.env.SUPABASE_URL);
-console.log("Port:", process.env.PORT);
-
-serve({
-  fetch: app.fetch,
-  port,
-});
+serve({ fetch: app.fetch, port });
