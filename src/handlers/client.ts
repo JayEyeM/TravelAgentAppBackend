@@ -42,6 +42,7 @@ export const createUser = factory.createHandlers(
 
 // Get all clients
 export const getAllUsers = factory.createHandlers(async (c) => {
+    console.log("Fetching clients...");
     try {
         const clients = await getAllClients();
         return c.json(clients);
