@@ -1,6 +1,8 @@
 import supabase from '../utils/supabase';
 import { Client } from '../types/client';
 import { Booking } from '../types/booking';
+import { formatBookingForSupabase } from '../utils/formatBooking';
+import { Confirmation, PersonDetail, SignificantDate, EmailAddress, PhoneNumber } from '../types/booking';
 
 /** Get all clients */
 export async function getAllClients(): Promise<Client[]> {
@@ -102,78 +104,305 @@ export async function deleteClient(id: number): Promise<boolean> {
     return true;
 }
 
-/** Get all bookings */
+/** Get all bookings along with related data */
 export async function getAllBookings(): Promise<Booking[]> {
-    const { data, error } = await supabase.from('bookings').select('*');
+    const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*');
 
-    if (error) {
-        console.error('Error fetching bookings:', error);
+    if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
         return [];
     }
 
-    return data || [];
+    // Fetch related data for each booking (you can optimize with JOINs if needed)
+    const bookingsWithDetails = await Promise.all(bookings.map(async (booking) => {
+        const { data: confirmation, error: confirmationError } = await supabase
+            .from('confirmation')
+            .select('*')
+            .eq('bookingId', booking.id)
+            .single();
+
+        const { data: personDetails, error: personDetailsError } = await supabase
+            .from('person_details')
+            .select('*')
+            .eq('bookingId', booking.id);
+
+        const { data: significantDates, error: significantDatesError } = await supabase
+            .from('significant_dates')
+            .select('*')
+            .eq('bookingId', booking.id);
+
+        const { data: emailAddresses, error: emailAddressesError } = await supabase
+            .from('email_addresses')
+            .select('*')
+            .eq('bookingId', booking.id);
+
+        const { data: phoneNumbers, error: phoneNumbersError } = await supabase
+            .from('phone_numbers')
+            .select('*')
+            .eq('bookingId', booking.id);
+
+        if (confirmationError || personDetailsError || significantDatesError || emailAddressesError || phoneNumbersError) {
+            console.error('Error fetching related data:', confirmationError, personDetailsError, significantDatesError, emailAddressesError, phoneNumbersError);
+        }
+
+        return {
+            ...booking,
+            confirmation,
+            personDetails,
+            significantDates,
+            emailAddresses,
+            phoneNumbers
+        };
+    }));
+
+    return bookingsWithDetails;
 }
 
-/** Get a booking by ID */
+
+/** Get a booking by ID along with related data */
 export async function getBookingById(id: number): Promise<Booking | null> {
-    const { data, error } = await supabase
+    const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('*')
         .eq('id', id)
         .single();
 
-    if (error) {
-        console.error(`Error fetching booking ${id}:`, error);
+    if (bookingError) {
+        console.error(`Error fetching booking ${id}:`, bookingError);
         return null;
     }
 
-    return data;
+    // Fetch related data for the specific booking
+    const { data: confirmation, error: confirmationError } = await supabase
+        .from('confirmation')
+        .select('*')
+        .eq('bookingId', id)
+        .single();
+
+    const { data: personDetails, error: personDetailsError } = await supabase
+        .from('person_details')
+        .select('*')
+        .eq('bookingId', id);
+
+    const { data: significantDates, error: significantDatesError } = await supabase
+        .from('significant_dates')
+        .select('*')
+        .eq('bookingId', id);
+
+    const { data: emailAddresses, error: emailAddressesError } = await supabase
+        .from('email_addresses')
+        .select('*')
+        .eq('bookingId', id);
+
+    const { data: phoneNumbers, error: phoneNumbersError } = await supabase
+        .from('phone_numbers')
+        .select('*')
+        .eq('bookingId', id);
+
+    if (confirmationError || personDetailsError || significantDatesError || emailAddressesError || phoneNumbersError) {
+        console.error('Error fetching related data:', confirmationError, personDetailsError, significantDatesError, emailAddressesError, phoneNumbersError);
+    }
+
+    return {
+        ...booking,
+        confirmation,
+        personDetails,
+        significantDates,
+        emailAddresses,
+        phoneNumbers
+    };
 }
 
-/** Create a new booking */
-export async function createBooking(booking: Omit<Booking, 'id'>): Promise<Booking | null> {
-    const { data, error } = await supabase
+
+/** Create a new booking along with related details */
+export async function createBooking(booking: Omit<Booking, 'id'>, relatedData: {
+    confirmation: Confirmation;
+    personDetails: PersonDetail[];
+    significantDates: SignificantDate[];
+    emailAddresses: EmailAddress[];
+    phoneNumbers: PhoneNumber[];
+}): Promise<Booking | null> {
+    const formattedBooking = formatBookingForSupabase(booking);
+
+    // Step 1: Insert the booking
+    const { data: insertedBooking, error: bookingError } = await supabase
         .from('bookings')
-        .insert([booking])
+        .insert([formattedBooking])
         .select()
         .single();
 
-    if (error) {
-        console.error('Error creating booking:', error);
+    if (bookingError) {
+        console.error('Error creating booking:', bookingError);
         return null;
     }
 
-    return data;
+    // Step 2: Insert related data
+    const { confirmation, personDetails, significantDates, emailAddresses, phoneNumbers } = relatedData;
+
+    // Input confirmation
+    const { data: insertedConfirmation, error: confirmationError } = await supabase
+        .from('confirmation')
+        .insert([{ ...confirmation, bookingId: insertedBooking.id }])
+        .select()
+        .single();
+
+    // onput person details
+    const { data: insertedPersonDetails, error: personDetailsError } = await supabase
+        .from('person_details')
+        .insert(personDetails.map(person => ({ ...person, bookingId: insertedBooking.id })));
+
+    // input significant dates
+    const { data: insertedSignificantDates, error: significantDatesError } = await supabase
+        .from('significant_dates')
+        .insert(significantDates.map(date => ({ ...date, bookingId: insertedBooking.id })));
+
+    // input email addresses
+    const { data: insertedEmailAddresses, error: emailAddressesError } = await supabase
+        .from('email_addresses')
+        .insert(emailAddresses.map(email => ({ ...email, bookingId: insertedBooking.id })));
+
+    // input phone numbers
+    const { data: insertedPhoneNumbers, error: phoneNumbersError } = await supabase
+        .from('phone_numbers')
+        .insert(phoneNumbers.map(phone => ({ ...phone, bookingId: insertedBooking.id })));
+
+    if (confirmationError || personDetailsError || significantDatesError || emailAddressesError || phoneNumbersError) {
+        console.error('Error inserting related data:', confirmationError, personDetailsError, significantDatesError, emailAddressesError, phoneNumbersError);
+        return null;
+    }
+
+    return insertedBooking;
 }
 
-/** Update a booking */
-export async function updateBooking(bookingId: number, updatedBooking: Partial<Booking>): Promise<Booking | null> {
-    const { data, error } = await supabase
+
+
+/** Update a booking along with related details */
+export async function updateBooking(bookingId: number, updatedBooking: Partial<Booking>, updatedRelatedData: {
+    confirmation?: Partial<Confirmation>;
+    personDetails?: Partial<PersonDetail>[];
+    significantDates?: Partial<SignificantDate>[];
+    emailAddresses?: Partial<EmailAddress>[];
+    phoneNumbers?: Partial<PhoneNumber>[];
+}): Promise<Booking | null> {
+    const formattedBooking = formatBookingForSupabase(updatedBooking);
+
+    // Step 1: Update the booking
+    const { data: updatedBookingData, error: bookingError } = await supabase
         .from('bookings')
-        .update(updatedBooking)
+        .update(formattedBooking)
         .eq('id', bookingId)
         .select()
         .single();
 
-    if (error) {
-        console.error(`Error updating booking ${bookingId}:`, error);
+    if (bookingError) {
+        console.error(`Error updating booking ${bookingId}:`, bookingError);
         return null;
     }
 
-    return data;
+    // Step 2: Update related data
+    if (updatedRelatedData.confirmation) {
+        const { data: updatedConfirmation, error: confirmationError } = await supabase
+            .from('confirmation')
+            .update(updatedRelatedData.confirmation)
+            .eq('bookingId', bookingId)
+            .select()
+            .single();
+
+        if (confirmationError) {
+            console.error('Error updating confirmation:', confirmationError);
+            return null;
+        }
+    }
+
+    if (updatedRelatedData.personDetails) {
+        const { data: updatedPersonDetails, error: personDetailsError } = await supabase
+            .from('person_details')
+            .upsert(updatedRelatedData.personDetails.map(person => ({ ...person, bookingId: bookingId })));
+
+        if (personDetailsError) {
+            console.error('Error updating person details:', personDetailsError);
+            return null;
+        }
+    }
+
+    if (updatedRelatedData.significantDates) {
+        const { data: updatedSignificantDates, error: significantDatesError } = await supabase
+            .from('significant_dates')
+            .upsert(updatedRelatedData.significantDates.map(date => ({ ...date, bookingId: bookingId })));
+
+        if (significantDatesError) {
+            console.error('Error updating significant dates:', significantDatesError);
+            return null;
+        }
+    }
+
+    if (updatedRelatedData.emailAddresses) {
+        const { data: updatedEmailAddresses, error: emailAddressesError } = await supabase
+            .from('email_addresses')
+            .upsert(updatedRelatedData.emailAddresses.map(email => ({ ...email, bookingId: bookingId })));
+
+        if (emailAddressesError) {
+            console.error('Error updating email addresses:', emailAddressesError);
+            return null;
+        }
+    }
+
+    if (updatedRelatedData.phoneNumbers) {
+        const { data: updatedPhoneNumbers, error: phoneNumbersError } = await supabase
+            .from('phone_numbers')
+            .upsert(updatedRelatedData.phoneNumbers.map(phone => ({ ...phone, bookingId: bookingId })));
+
+        if (phoneNumbersError) {
+            console.error('Error updating phone numbers:', phoneNumbersError);
+            return null;
+        }
+    }
+
+    return updatedBookingData;
 }
 
-/** Delete a booking */
+
+/** Delete a booking and its related details */
 export async function deleteBooking(id: number): Promise<boolean> {
-    const { error } = await supabase
+    // Step 1: Delete related data first
+    const { error: confirmationError } = await supabase
+        .from('confirmation')
+        .delete()
+        .eq('bookingId', id);
+
+    const { error: personDetailsError } = await supabase
+        .from('person_details')
+        .delete()
+        .eq('bookingId', id);
+
+    const { error: significantDatesError } = await supabase
+        .from('significant_dates')
+        .delete()
+        .eq('bookingId', id);
+
+    const { error: emailAddressesError } = await supabase
+        .from('email_addresses')
+        .delete()
+        .eq('bookingId', id);
+
+    const { error: phoneNumbersError } = await supabase
+        .from('phone_numbers')
+        .delete()
+        .eq('bookingId', id);
+
+    // Step 2: Delete the booking
+    const { error: bookingError } = await supabase
         .from('bookings')
         .delete()
         .eq('id', id);
 
-    if (error) {
-        console.error(`Error deleting booking ${id}:`, error);
+    if (confirmationError || personDetailsError || significantDatesError || emailAddressesError || phoneNumbersError || bookingError) {
+        console.error('Error deleting booking or related data:', confirmationError, personDetailsError, significantDatesError, emailAddressesError, phoneNumbersError, bookingError);
         return false;
     }
 
     return true;
 }
+
