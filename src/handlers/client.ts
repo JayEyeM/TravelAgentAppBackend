@@ -43,6 +43,9 @@ export const createUser = factory.createHandlers(
 // Get all clients
 export const getAllUsers = factory.createHandlers(async (c) => {
     console.log("Fetching clients...");
+    const getUser = c.get('user');
+    console.log(getUser);
+
     try {
         const clients = await getAllClients();
         return c.json(clients);
@@ -50,6 +53,7 @@ export const getAllUsers = factory.createHandlers(async (c) => {
         console.error("Error fetching clients:", error);
         return c.json({ error: "An error occurred while fetching clients" }, 500);
     }
+
 });
 
 // Get a client by ID
