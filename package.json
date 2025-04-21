@@ -1,8 +1,9 @@
 {
-  "name": "TravelAgentBackend",
+  "name": "travel-agent-backend",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "win-int-test": "powershell -executionpolicy bypass -File .\\integration-test.ps1"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.1",
