@@ -83,7 +83,14 @@ export const createBookingHandler = factory.createHandlers(validator('json', (va
     return value;
 }), async (c) => {
     const body = await c.req.valid('json');
-    const newBooking = await createBooking(body as unknown as Booking);
+    const relatedData = {
+        confirmation: body.confirmations[0],
+        personDetails: body.people,
+        significantDates: body.significantDates,
+        emailAddresses: body.emailAddresses,
+        phoneNumbers: body.phoneNumbers,
+    };
+    const newBooking = await createBooking(body as unknown as Booking, relatedData);
     return c.json(newBooking, 201);
 });
 
@@ -95,7 +102,11 @@ export const getAllBookingsHandler = factory.createHandlers(async (c) => {
 
 // Get a booking by ID
 export const getBookingByIdHandler = factory.createHandlers(async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
+    const idParam = c.req.param('id');
+    if (!idParam) {
+        return c.json({ message: 'Booking ID is required' }, 400);
+    }
+    const id = parseInt(idParam, 10);
 
     if (isNaN(id)) {
         return c.json({ message: 'Invalid booking ID' }, 400);
@@ -111,26 +122,46 @@ export const getBookingByIdHandler = factory.createHandlers(async (c) => {
 
 // Update a booking by ID
 export const updateBookingByIdHandler = factory.createHandlers(async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
-    const body = await c.req.json<Partial<Booking>>();
+    const idParam = c.req.param('id');
+    if (!idParam) {
+        return c.json({ message: 'Booking ID is required' }, 400);
+    }
+    const id = parseInt(idParam, 10);
 
     if (isNaN(id)) {
         return c.json({ message: 'Invalid booking ID' }, 400);
     }
 
+    const body = await c.req.json<Partial<Booking>>();
     const existingBooking = await getBookingById(id);
     if (!existingBooking) {
         return c.json({ message: 'Booking not found' }, 404);
     }
 
     const updatedBookingData = { ...existingBooking, ...body };
-    const updatedBooking = await updateBooking(updatedBookingData);
+    const updatedRelatedData = {
+        confirmation: body.confirmations?.[0] || null,
+        personDetails: body.people || [],
+        significantDates: body.significantDates || [],
+        emailAddresses: body.emailAddresses || [],
+        phoneNumbers: body.phoneNumbers || [],
+    };
+
+    const updatedBooking = await updateBooking(id, updatedBookingData, updatedRelatedData);
     return c.json(updatedBooking);
 });
 
 // Delete a booking by ID
 export const deleteBookingByIdHandler = factory.createHandlers(async (c) => {
-    const id = parseInt(c.req.param('id'), 10);
+    const idParam = c.req.param('id');
+if (!idParam) {
+    return c.json({ message: 'Booking ID is required' }, 400);
+}
+const id = parseInt(idParam, 10);
+
+if (isNaN(id)) {
+    return c.json({ message: 'Invalid booking ID' }, 400);
+}
 
     if (isNaN(id)) {
         return c.json({ message: 'Invalid booking ID' }, 400);

@@ -5,8 +5,12 @@ import { formatBookingForSupabase } from '../utils/formatBooking';
 import { Confirmation, PersonDetail, SignificantDate, EmailAddress, PhoneNumber } from '../types/booking';
 
 /** Get all clients */
-export async function getAllClients(): Promise<Client[]> {
-    const { data, error } = await supabase.from('clients').select('*');
+export async function getAllClients(userId: string): Promise<Client[]> {
+    const { data, error } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('user_id', userId)
+    ;
     
     if (error) {
         console.error('Error fetching clients:', error);
@@ -17,11 +21,12 @@ export async function getAllClients(): Promise<Client[]> {
 }
 
 /** Get a single client by ID */
-export async function getClientById(id: number): Promise<Client | null> {
+export async function getClientById(id: number, user_id: string): Promise<Client | null> {
     const { data, error } = await supabase
         .from('clients')
         .select('*')
         .eq('id', id)
+        .eq('user_id', user_id)
         .single();
 
     if (error) {

@@ -48,3 +48,11 @@ export interface Booking {
     paymentDate: UnixTimestamp;
     dateCreated: UnixTimestamp;
 }
+
+export interface BookingWithRelations extends Booking {
+    confirmations?: Confirmation[];
+    people?: PersonDetail[];
+    significantDates?: SignificantDate[];
+    emailAddresses?: EmailAddress[];
+    phoneNumbers?: PhoneNumber[];
+}

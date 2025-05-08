@@ -22,15 +22,20 @@ export const createUser = factory.createHandlers(
     }),
     async (c) => {
         try {
+            const user : any = c.get('user');
+            console.log("Creating client for user:", user);
             const body = await c.req.valid('json');
 
             const newClient = await createClient({
+                userId: user.id,
                 ...body,
                 dateCreated: Date.now(), 
                 paymentDate: body.paymentDate || null, 
                 finalPaymentDate: body.finalPaymentDate || null, 
                 notes: body.notes || null,  
             } as Client);
+
+            console.log(body);
 
             return c.json(newClient, 201);
         } catch (error) {
@@ -47,7 +52,7 @@ export const getAllUsers = factory.createHandlers(async (c) => {
     console.log(getUser);
 
     try {
-        const clients = await getAllClients();
+        const clients = await getAllClients(getUser.id);
         return c.json(clients);
     } catch (error) {
         console.error("Error fetching clients:", error);
@@ -59,12 +64,14 @@ export const getAllUsers = factory.createHandlers(async (c) => {
 // Get a client by ID
 export const getUserById = factory.createHandlers(async (c) => {
     try {
+        const user: any = c.get('user');
         const id = c.req.param('id');
         if (!id || isNaN(Number(id))) {
             return c.json({ error: 'Valid client ID is required' }, 400);
         }
 
-        const client = await getClientById(Number(id));
+        const client = await getClientById(Number(id), user.id);
+        console.log("Client ID:", id);
         if (!client) {
             return c.json({ error: 'Client not found' }, 404);
         }
