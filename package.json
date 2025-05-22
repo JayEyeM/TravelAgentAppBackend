@@ -8,6 +8,7 @@
   "dependencies": {
     "@hono/node-server": "^1.13.1",
     "@supabase/supabase-js": "^2.49.1",
+    "bcryptjs": "^3.0.2",
     "chalk": "^4.1.2",
     "dotenv": "^16.4.7",
     "hono": "^4.6.3"
