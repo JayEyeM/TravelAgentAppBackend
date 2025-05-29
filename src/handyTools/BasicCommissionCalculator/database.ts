@@ -5,7 +5,7 @@ import { BasicCommissionData } from "./types";
 
 export async function insertCommission(data: BasicCommissionData) {
   const { data: result, error } = await supabase
-    .from("Basic Commissions Calulator")
+    .from("Basic Commissions Calculator")
     .insert([data])
     .select()
     .single();
@@ -15,4 +15,48 @@ export async function insertCommission(data: BasicCommissionData) {
   }
 
   return result;
+}
+
+export async function getCommissionsByUserId(userId: string) {
+  const { data, error } = await supabase
+    .from("Basic Commissions Calculator")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
+
+export async function updateCommissionById(id: string, data: Partial<BasicCommissionData>) {
+  const { data: result, error } = await supabase
+    .from("Basic Commissions Calculator")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return result;
+}
+
+export async function deleteCommissionById(id: string) {
+  const { data, error } = await supabase
+    .from("Basic Commissions Calculator")
+    .delete()
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
 }
