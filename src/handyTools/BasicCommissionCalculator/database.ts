@@ -30,6 +30,20 @@ export async function getCommissionsByUserId(userId: string) {
   return data;
 }
 
+export async function getCommissionById(id: string) {
+  const { data, error } = await supabase
+    .from("Basic Commissions Calculator")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
 
 export async function updateCommissionById(id: string, data: Partial<BasicCommissionData>) {
   const { data: result, error } = await supabase
