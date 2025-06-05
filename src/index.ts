@@ -11,6 +11,7 @@ import authRoutes from './routers/authRoutes';
 import { getCookie } from 'hono/cookie';
 import supabase from './utils/supabase';
 import { BasicCommissionRouter } from './handyTools/BasicCommissionCalculator/router';
+import { HandyToolsUserRouter } from './handyTools/handyToolsAuth/router';
 
 const app = new Hono();
 const port = parseInt(process.env.PORT ?? '8000');
@@ -60,6 +61,7 @@ app.route('/auth', authRoutes);
 
 // public handy tools routes
 app.route('/basic-commissions', BasicCommissionRouter);
+app.route('/handy-tools-auth', HandyToolsUserRouter);
 
 console.log(`Server is running on port ${port}`);
 serve({ fetch: app.fetch, port });
