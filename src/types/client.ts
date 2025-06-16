@@ -1,3 +1,5 @@
+//File path: src/types/client.ts
+
 export type Email = string;
 export type UnixTimestamp = number; // e.g., 1729200231
 

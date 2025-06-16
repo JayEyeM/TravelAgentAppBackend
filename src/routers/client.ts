@@ -1,12 +1,19 @@
+// File path: src/routers/client.ts
+
 import { Hono } from "hono";
-import { createUser, getAllUsers, getUserById, updateUserById, deleteUserById } from "../handlers/client";
+import {
+  createClientHandler,
+  getAllClientsHandler,
+  getClientByIdHandler,
+  updateClientByIdHandler,
+  deleteClientByIdHandler,
+} from "../handlers/client";
 
-export const UserRouter = new Hono();
+export const ClientRouter = new Hono();
 
-// Create a new client
-UserRouter
-    .post('/', ...createUser)
-    .get('/:id', ...getUserById)
-    .get('/', ...getAllUsers)
-    .patch('/:id', ...updateUserById)
-    .delete('/:id', ...deleteUserById);
+ClientRouter
+  .post('/', ...createClientHandler)
+  .get('/', ...getAllClientsHandler)
+  .get('/:id', ...getClientByIdHandler)
+  .patch('/:id', ...updateClientByIdHandler)
+  .delete('/:id', ...deleteClientByIdHandler);
