@@ -7,6 +7,7 @@ import {Booking, BookingInput } from '../types/booking';
 import { formatBookingForSupabase } from '../utils/formatBooking';
 import { Confirmation, PersonDetail, SignificantDate, EmailAddress, PhoneNumber } from '../types/booking';
 import { snakeToCamel2, camelToSnake2 } from '../utils/caseConverter2';
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
 
 /** Get all clients */
 export async function getAllClients(userId: string): Promise<Client[]> {
@@ -192,6 +193,68 @@ export async function getAllBookings(): Promise<Booking[]> {
 
     return bookingsWithDetails;
 }
+
+export async function fetchAllBookingsForClient(clientId: number): Promise<PostgrestSingleResponse<any[]>> {
+  // fetch all bookings for this client
+  
+  return supabase
+    .from('bookings')
+    .select('*')
+    .eq('client_id', clientId);
+  }
+
+
+/** Get all bookings by client ID for a specific user */
+export async function getBookingsByClientId(clientId: number, userId: string): Promise<Booking[]> {
+  // verfy client belongs to the user
+  const { data: client, error: clientError } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('id', clientId)
+    .eq('user_id', userId)
+    .single();
+
+  if (clientError || !client) {
+    console.error(`❌ Client ${clientId} not found or unauthorized for user ${userId}`);
+    return [];
+  }
+
+  const { data: bookings, error: bookingsError } = await fetchAllBookingsForClient(clientId);
+
+  if (bookingsError || !bookings) {
+    console.error(`❌ Error fetching bookings for client ${clientId}:`, bookingsError);
+    return [];
+  }
+
+  // Fetch related data for each booking
+  const bookingsWithDetails = await Promise.all(bookings.map(async (booking) => {
+    const [
+      { data: confirmation },
+      { data: personDetails },
+      { data: significantDates },
+      { data: emailAddresses },
+      { data: phoneNumbers },
+    ] = await Promise.all([
+      supabase.from('confirmation').select('*').eq('booking_id', booking.id).single(),
+      supabase.from('person_details').select('*').eq('booking_id', booking.id),
+      supabase.from('significant_dates').select('*').eq('booking_id', booking.id),
+      supabase.from('email_addresses').select('*').eq('booking_id', booking.id),
+      supabase.from('phone_numbers').select('*').eq('booking_id', booking.id),
+    ]);
+
+    return {
+      ...snakeToCamel2(booking),
+      confirmation,
+      personDetails,
+      significantDates,
+      emailAddresses,
+      phoneNumbers,
+    };
+  }));
+
+  return bookingsWithDetails;
+}
+
 
 // Get a single booking by ID including related data 
 // This function fetches a booking by its ID and ensures the user owns the booking before returning
@@ -475,46 +538,95 @@ export async function updateBooking(
 }
 
 
+//Delete a booking and all related data
+// This function deletes a booking by its ID and ensures the user owns the booking before deleting
+export async function deleteBooking(id: number, userId: string): Promise<boolean> {
+  // Step 0: Check if booking exists and belongs to the user
+  const { data: booking, error: bookingError } = await supabase
+    .from('bookings')
+    .select('client_id')
+    .eq('id', id)
+    .single();
 
-/** Delete a booking and its related details */
-export async function deleteBooking(id: number): Promise<boolean> {
-    // Step 1: Delete related data first
-    const { error: confirmationError } = await supabase
-        .from('confirmation')
-        .delete()
-        .eq('bookingId', id);
+  if (bookingError) {
+    console.error(`❌ Booking lookup failed:`, bookingError);
+    return false;
+  }
 
-    const { error: personDetailsError } = await supabase
-        .from('person_details')
-        .delete()
-        .eq('bookingId', id);
+  if (!booking) {
+    console.warn(`⚠️ Booking ${id} not found`);
+    return false;
+  }
 
-    const { error: significantDatesError } = await supabase
-        .from('significant_dates')
-        .delete()
-        .eq('bookingId', id);
+  const { data: client, error: clientError } = await supabase
+    .from('clients')
+    .select('user_id')
+    .eq('id', booking.client_id)
+    .single();
 
-    const { error: emailAddressesError } = await supabase
-        .from('email_addresses')
-        .delete()
-        .eq('bookingId', id);
+  if (clientError) {
+    console.error(`❌ Client lookup failed:`, clientError);
+    return false;
+  }
 
-    const { error: phoneNumbersError } = await supabase
-        .from('phone_numbers')
-        .delete()
-        .eq('bookingId', id);
+  if (!client || client.user_id !== userId) {
+    console.warn(`⚠️ Unauthorized delete attempt for booking ${id} by user ${userId}`);
+    return false;
+  }
 
-    // Step 2: Delete the booking
-    const { error: bookingError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id);
+  // Step 1: Delete related data
+  const { error: confirmationError } = await supabase
+    .from('confirmations')
+    .delete()
+    .eq('booking_id', id);
 
-    if (confirmationError || personDetailsError || significantDatesError || emailAddressesError || phoneNumbersError || bookingError) {
-        console.error('Error deleting booking or related data:', confirmationError, personDetailsError, significantDatesError, emailAddressesError, phoneNumbersError, bookingError);
-        return false;
-    }
+  const { error: personDetailsError } = await supabase
+    .from('person_details')
+    .delete()
+    .eq('booking_id', id);
 
-    return true;
+  const { error: significantDatesError } = await supabase
+    .from('significant_dates')
+    .delete()
+    .eq('booking_id', id);
+
+  const { error: emailAddressesError } = await supabase
+    .from('email_addresses')
+    .delete()
+    .eq('booking_id', id);
+
+  const { error: phoneNumbersError } = await supabase
+    .from('phone_numbers')
+    .delete()
+    .eq('booking_id', id);
+
+  // Step 2: Delete the booking itself
+  const { error: bookingDeleteError } = await supabase
+    .from('bookings')
+    .delete()
+    .eq('id', id);
+
+  if (
+    confirmationError ||
+    personDetailsError ||
+    significantDatesError ||
+    emailAddressesError ||
+    phoneNumbersError ||
+    bookingDeleteError
+  ) {
+    console.error('❌ Error deleting booking or related data:', {
+      confirmationError,
+      personDetailsError,
+      significantDatesError,
+      emailAddressesError,
+      phoneNumbersError,
+      bookingDeleteError,
+    });
+    return false;
+  }
+
+  console.log(`✅ Booking ${id} and related data deleted for user ${userId}`);
+  return true;
 }
+
 
