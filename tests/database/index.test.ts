@@ -2,7 +2,8 @@
 // Description: Tests for the createClient function in the database module
 
 
-import { createClient, updateClient } from "../../src/database/index";
+import { createClient, updateClient, getBookingsByClientId } from "../../src/database/index";
+import * as database from "../../src/database/index";
 import { Client } from "../../src/types/client";
 
 // __mocks__/src/utils/supabase.ts
@@ -154,3 +155,71 @@ describe("updateClient Tests", () => {
 
 
 
+describe("getBookingsByClientId Tests", () => {
+  const clientId = 1;
+  const userId = "user123";
+
+  it("should return an empty array if the client does not belong to the user", async () => {
+    (supabase as any).mockSingle
+      .mockResolvedValueOnce({ data: null, error: { message: "Not found" } });
+      jest.spyOn(database, 'fetchAllBookingsForClient').mockResolvedValueOnce({ data: [], error: null } as any);
+
+    const bookings = await getBookingsByClientId(clientId, userId);
+    expect(bookings).toEqual([]);
+  });
+
+  it("should return an empty array if no bookings are found", async () => {
+    
+    (supabase as any).mockSingle
+      .mockResolvedValueOnce({ data: { id: clientId, user_id: userId }, error: null });
+
+   
+    (supabase as any).mockSelect.mockResolvedValueOnce({ data: [], error: null });
+
+    const bookings = await getBookingsByClientId(clientId, userId);
+    expect(bookings).toEqual([]);
+  });
+
+  it("should return bookings with related data", async () => {
+    
+    (supabase as any).mockSingle
+      .mockResolvedValueOnce({ data: { id: clientId, user_id: userId }, error: null });
+
+  
+    (supabase as any).mockSelect.mockResolvedValueOnce({
+      data: [
+        { id: 1, client_id: clientId, destination: "Test Land" },
+        { id: 2, client_id: clientId, destination: "Other Place" }
+      ],
+      error: null
+    });
+
+    
+    const confirmationMock = { id: 10, confirmed: true };
+    const personDetailsMock = [{ id: 11, name: "Alice" }];
+    const significantDatesMock = [{ id: 12, date_type: "departure" }];
+    const emailAddressesMock = [{ id: 13, email: "a@example.com" }];
+    const phoneNumbersMock = [{ id: 14, number: "123-4567" }];
+
+    (supabase as any).mockSingle
+      .mockResolvedValue({ data: confirmationMock, error: null });
+
+    (supabase as any).mockSingle.mockResolvedValue([
+      { data: personDetailsMock, error: null },
+      { data: significantDatesMock, error: null },
+      { data: emailAddressesMock, error: null },
+      { data: phoneNumbersMock, error: null }
+    ]);
+
+    const bookings = await getBookingsByClientId(clientId, userId);
+    expect(bookings.length).toBe(2);
+    expect(bookings[0]).toMatchObject({
+      clientId,
+      confirmation: confirmationMock,
+      personDetails: personDetailsMock,
+      significantDates: significantDatesMock,
+      emailAddresses: emailAddressesMock,
+      phoneNumbers: phoneNumbersMock
+    });
+  });
+});

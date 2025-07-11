@@ -9,7 +9,7 @@ import {
   PhoneNumber
 } from '../types/booking';
 
-import { createBooking, getAllBookings, getBookingById, updateBooking, deleteBooking } from "../database";
+import { createBooking, getAllBookings, getBookingsByClientId , getBookingById, updateBooking, deleteBooking } from "../database";
 import { toUnixTimestamp } from '../utils/toUnixConverter';
 
 const factory = createFactory();
@@ -159,24 +159,60 @@ export const getAllBookingsHandler = factory.createHandlers(async (c) => {
     return c.json(bookings);
 });
 
+
+// Get bookings by client ID
+export const getBookingsByClientIdHandler = factory.createHandlers(async (c) => {
+  const user = c.get("user");
+  if (!user || !user.id) {
+    return c.json({ message: "Unauthorized" }, 401);
+  }
+
+  const userId = user.id;
+  const clientIdParam = c.req.param("clientId");
+
+  if (!clientIdParam) {
+    return c.json({ message: "Client ID is required" }, 400);
+  }
+
+  const clientId = parseInt(clientIdParam, 10);
+  if (isNaN(clientId)) {
+    return c.json({ message: "Invalid client ID" }, 400);
+  }
+
+  const bookings = await getBookingsByClientId(clientId, userId);
+
+  if (!bookings.length) {
+    return c.json({ message: "No bookings found for this client or unauthorized" }, 404);
+  }
+
+  return c.json(bookings);
+});
+
+
+
 // Get a booking by ID
 export const getBookingByIdHandler = factory.createHandlers(async (c) => {
-    const idParam = c.req.param('id');
-    if (!idParam) {
-        return c.json({ message: 'Booking ID is required' }, 400);
-    }
-    const id = parseInt(idParam, 10);
+  const idParam = c.req.param('id');
+  if (!idParam) {
+    return c.json({ message: 'Booking ID is required' }, 400);
+  }
 
-    if (isNaN(id)) {
-        return c.json({ message: 'Invalid booking ID' }, 400);
-    }
+  const id = parseInt(idParam, 10);
+  if (isNaN(id)) {
+    return c.json({ message: 'Invalid booking ID' }, 400);
+  }
 
-    const booking = await getBookingById(id);
-    if (!booking) {
-        return c.json({ message: 'Booking not found' }, 404);
-    }
+  const user = c.get('user'); 
+  if (!user) {
+    return c.json({ message: 'Unauthorized' }, 401);
+  }
 
-    return c.json(booking);
+  const booking = await getBookingById(id, user.id); 
+  if (!booking) {
+    return c.json({ message: 'Booking not found' }, 404);
+  }
+
+  return c.json(booking);
 });
 
 
@@ -308,24 +344,25 @@ export const updateBookingByIdHandler = factory.createHandlers(async (c) => {
 
 // Delete a booking by ID
 export const deleteBookingByIdHandler = factory.createHandlers(async (c) => {
-    const idParam = c.req.param('id');
-if (!idParam) {
+  const idParam = c.req.param('id');
+  if (!idParam) {
     return c.json({ message: 'Booking ID is required' }, 400);
-}
-const id = parseInt(idParam, 10);
-
-if (isNaN(id)) {
+  }
+  const id = parseInt(idParam, 10);
+  if (isNaN(id)) {
     return c.json({ message: 'Invalid booking ID' }, 400);
+  }
+
+  const user = c.get('user');
+if (!user) {
+  return c.json({ message: 'Unauthorized' }, 401);
 }
 
-    if (isNaN(id)) {
-        return c.json({ message: 'Invalid booking ID' }, 400);
-    }
+const deleted = await deleteBooking(id, user.id);
 
-    const deleted = await deleteBooking(id);
-    if (!deleted) {
-        return c.json({ message: 'Booking not found' }, 404);
-    }
+  if (!deleted) {
+    return c.json({ message: 'Booking not found or unauthorized' }, 404);
+  }
 
-    return c.json({ message: 'Booking deleted successfully' });
+  return c.json({ message: 'Booking deleted successfully' });
 });
