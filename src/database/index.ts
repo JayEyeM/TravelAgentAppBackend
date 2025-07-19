@@ -194,66 +194,130 @@ export async function getAllBookings(): Promise<Booking[]> {
     return bookingsWithDetails;
 }
 
-export async function fetchAllBookingsForClient(clientId: number): Promise<PostgrestSingleResponse<any[]>> {
-  // fetch all bookings for this client
-  
+// ✅ Fetch all bookings for a specific client
+export async function fetchAllBookingsForClient(
+  clientId: number
+): Promise<PostgrestSingleResponse<any[]>> {
   return supabase
-    .from('bookings')
-    .select('*')
-    .eq('client_id', clientId);
-  }
+    .from("bookings")
+    .select("*")
+    .eq("client_id", clientId);
+}
 
+// ✅ Fetch confirmation for a specific booking
+export async function fetchConfirmationForBooking(
+  bookingId: number
+): Promise<PostgrestSingleResponse<any>> {
+  return supabase
+    .from("confirmation")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .single();
+}
 
-/** Get all bookings by client ID for a specific user */
-export async function getBookingsByClientId(clientId: number, userId: string): Promise<Booking[]> {
-  // verfy client belongs to the user
+// ✅ Fetch person details for a specific booking
+export async function fetchPersonDetailsForBooking(
+  bookingId: number
+): Promise<PostgrestSingleResponse<any[]>> {
+  return supabase
+    .from("person_details")
+    .select("*")
+    .eq("booking_id", bookingId);
+}
+
+// ✅ Fetch significant dates for a specific booking
+export async function fetchSignificantDatesForBooking(
+  bookingId: number
+): Promise<PostgrestSingleResponse<any[]>> {
+  return supabase
+    .from("significant_dates")
+    .select("*")
+    .eq("booking_id", bookingId);
+}
+
+// ✅ Fetch email addresses for a specific booking
+export async function fetchEmailAddressesForBooking(
+  bookingId: number
+): Promise<PostgrestSingleResponse<any[]>> {
+  return supabase
+    .from("email_addresses")
+    .select("*")
+    .eq("booking_id", bookingId);
+}
+
+// ✅ Fetch phone numbers for a specific booking
+export async function fetchPhoneNumbersForBooking(
+  bookingId: number
+): Promise<PostgrestSingleResponse<any[]>> {
+  return supabase
+    .from("phone_numbers")
+    .select("*")
+    .eq("booking_id", bookingId);
+}
+
+/** ✅ Get all bookings by client ID for a specific user */
+export async function getBookingsByClientId(
+  clientId: number,
+  userId: string
+): Promise<Booking[]> {
+  // 1️⃣ Verify the client belongs to the user
   const { data: client, error: clientError } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('id', clientId)
-    .eq('user_id', userId)
+    .from("clients")
+    .select("*")
+    .eq("id", clientId)
+    .eq("user_id", userId)
     .single();
 
   if (clientError || !client) {
-    console.error(`❌ Client ${clientId} not found or unauthorized for user ${userId}`);
+    console.error(
+      `❌ Client ${clientId} not found or unauthorized for user ${userId}`
+    );
     return [];
   }
 
-  const { data: bookings, error: bookingsError } = await fetchAllBookingsForClient(clientId);
+  // 2️⃣ Fetch all bookings for this client
+  const { data: bookings, error: bookingsError } =
+    await fetchAllBookingsForClient(clientId);
 
   if (bookingsError || !bookings) {
-    console.error(`❌ Error fetching bookings for client ${clientId}:`, bookingsError);
+    console.error(
+      `❌ Error fetching bookings for client ${clientId}:`,
+      bookingsError
+    );
     return [];
   }
 
-  // Fetch related data for each booking
-  const bookingsWithDetails = await Promise.all(bookings.map(async (booking) => {
-    const [
-      { data: confirmation },
-      { data: personDetails },
-      { data: significantDates },
-      { data: emailAddresses },
-      { data: phoneNumbers },
-    ] = await Promise.all([
-      supabase.from('confirmation').select('*').eq('booking_id', booking.id).single(),
-      supabase.from('person_details').select('*').eq('booking_id', booking.id),
-      supabase.from('significant_dates').select('*').eq('booking_id', booking.id),
-      supabase.from('email_addresses').select('*').eq('booking_id', booking.id),
-      supabase.from('phone_numbers').select('*').eq('booking_id', booking.id),
-    ]);
+  // 3️⃣ Fetch related data for each booking using the new helper functions
+  const bookingsWithDetails = await Promise.all(
+    bookings.map(async (booking) => {
+      const [
+        { data: confirmation },
+        { data: personDetails },
+        { data: significantDates },
+        { data: emailAddresses },
+        { data: phoneNumbers },
+      ] = await Promise.all([
+        fetchConfirmationForBooking(booking.id),
+        fetchPersonDetailsForBooking(booking.id),
+        fetchSignificantDatesForBooking(booking.id),
+        fetchEmailAddressesForBooking(booking.id),
+        fetchPhoneNumbersForBooking(booking.id),
+      ]);
 
-    return {
-      ...snakeToCamel2(booking),
-      confirmation,
-      personDetails,
-      significantDates,
-      emailAddresses,
-      phoneNumbers,
-    };
-  }));
+      return {
+        ...snakeToCamel2(booking),
+        confirmation,
+        personDetails,
+        significantDates,
+        emailAddresses,
+        phoneNumbers,
+      };
+    })
+  );
 
   return bookingsWithDetails;
 }
+
 
 
 // Get a single booking by ID including related data 
