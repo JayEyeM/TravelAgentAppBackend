@@ -1,3 +1,5 @@
+//File path: src/index.ts
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -13,6 +15,7 @@ import supabase from './utils/supabase';
 import { BasicCommissionRouter } from './handyTools/BasicCommissionCalculator/router';
 import { HandyToolsUserRouter } from './handyTools/handyToolsAuth/router';
 import type { MiddlewareHandler } from 'hono';
+import { CommissionRouter } from './routers/commission';
 
 
 const app = new Hono();
@@ -69,10 +72,15 @@ app.use('/clients', Authorize);
 app.use('/bookings', Authorize);
 app.use('/clients/*', Authorize);
 app.use('/bookings/*', Authorize);
+app.use('/commissions', Authorize);
+app.use('/commissions/*', Authorize);
+
 
 // Routes available
 app.route('/clients', ClientRouter);
 app.route('/bookings', BookingRouter);
+app.route('/commissions', CommissionRouter);
+
 app.route('/auth', authRoutes);
 
 // public handy tools routes

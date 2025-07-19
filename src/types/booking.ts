@@ -1,3 +1,5 @@
+// File: src/types/booking.ts
+
 import { Email, UnixTimestamp } from "./client";
 
 //

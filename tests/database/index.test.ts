@@ -160,66 +160,144 @@ describe("getBookingsByClientId Tests", () => {
   const userId = "user123";
 
   it("should return an empty array if the client does not belong to the user", async () => {
+    // Client not found
     (supabase as any).mockSingle
       .mockResolvedValueOnce({ data: null, error: { message: "Not found" } });
-      jest.spyOn(database, 'fetchAllBookingsForClient').mockResolvedValueOnce({ data: [], error: null } as any);
+
+    // fetchAllBookingsForClient still called but return empty
+    jest.spyOn(database, "fetchAllBookingsForClient")
+      .mockResolvedValueOnce({ data: [], error: null } as any);
 
     const bookings = await getBookingsByClientId(clientId, userId);
     expect(bookings).toEqual([]);
   });
 
   it("should return an empty array if no bookings are found", async () => {
-    
+    // Client exists
     (supabase as any).mockSingle
       .mockResolvedValueOnce({ data: { id: clientId, user_id: userId }, error: null });
 
-   
-    (supabase as any).mockSelect.mockResolvedValueOnce({ data: [], error: null });
+    // No bookings returned
+    jest.spyOn(database, "fetchAllBookingsForClient")
+      .mockResolvedValueOnce({ data: [], error: null } as any);
 
     const bookings = await getBookingsByClientId(clientId, userId);
     expect(bookings).toEqual([]);
   });
 
   it("should return bookings with related data", async () => {
-    
+    // Client exists
     (supabase as any).mockSingle
       .mockResolvedValueOnce({ data: { id: clientId, user_id: userId }, error: null });
 
-  
-    (supabase as any).mockSelect.mockResolvedValueOnce({
-      data: [
-        { id: 1, client_id: clientId, destination: "Test Land" },
-        { id: 2, client_id: clientId, destination: "Other Place" }
-      ],
-      error: null
+    // Bookings data
+    const booking1 = {
+      id: 1,
+      clientId,
+      travelDate: 123,
+      clientFinalPaymentDate: 456,
+      supplierFinalPaymentDate: 789,
+      bookingDate: 111,
+      invoicedDate: 222,
+      referenceCode: "REF1",
+      amount: 100,
+      notes: "Notes 1",
+      invoiced: true,
+      paid: true,
+      paymentDate: 333,
+      dateCreated: 444
+    };
+    const booking2 = {
+      id: 2,
+      clientId,
+      travelDate: 555,
+      clientFinalPaymentDate: 666,
+      supplierFinalPaymentDate: 777,
+      bookingDate: 888,
+      invoicedDate: 999,
+      referenceCode: "REF2",
+      amount: 200,
+      notes: "Notes 2",
+      invoiced: false,
+      paid: false,
+      paymentDate: 111,
+      dateCreated: 222
+    };
+
+    jest.spyOn(database, "fetchAllBookingsForClient")
+      .mockResolvedValueOnce({ data: [booking1, booking2], error: null } as any);
+
+    // Related mocks for booking1
+    const confirmationMock1 = { id: 10, bookingId: 1, confirmationNumber: "CONF123", supplier: "SupplierA" };
+    const personDetailsMock1 = [{ id: 11, bookingId: 1, name: "Alice", dateOfBirth: 111111 }];
+    const significantDatesMock1 = [{ id: 12, bookingId: 1, date: 222222 }];
+    const emailAddressesMock1 = [{ id: 13, bookingId: 1, email: "alice@example.com" }];
+    const phoneNumbersMock1 = [{ id: 14, bookingId: 1, phone: "123-4567" }];
+
+    // Related mocks for booking2
+    const confirmationMock2 = { id: 20, bookingId: 2, confirmationNumber: "CONF456", supplier: "SupplierB" };
+    const personDetailsMock2 = [{ id: 21, bookingId: 2, name: "Bob", dateOfBirth: 333333 }];
+    const significantDatesMock2 = [{ id: 22, bookingId: 2, date: 444444 }];
+    const emailAddressesMock2 = [{ id: 23, bookingId: 2, email: "bob@example.com" }];
+    const phoneNumbersMock2 = [{ id: 24, bookingId: 2, phone: "987-6543" }];
+
+    // Spies for each fetch function
+    jest.spyOn(database, "fetchConfirmationForBooking")
+      .mockResolvedValueOnce({ data: confirmationMock1, error: null } as any)
+      .mockResolvedValueOnce({ data: confirmationMock2, error: null } as any);
+
+    jest.spyOn(database, "fetchPersonDetailsForBooking")
+      .mockResolvedValueOnce({ data: personDetailsMock1, error: null } as any)
+      .mockResolvedValueOnce({ data: personDetailsMock2, error: null } as any);
+
+    jest.spyOn(database, "fetchSignificantDatesForBooking")
+      .mockResolvedValueOnce({ data: significantDatesMock1, error: null } as any)
+      .mockResolvedValueOnce({ data: significantDatesMock2, error: null } as any);
+
+    jest.spyOn(database, "fetchEmailAddressesForBooking")
+      .mockResolvedValueOnce({ data: emailAddressesMock1, error: null } as any)
+      .mockResolvedValueOnce({ data: emailAddressesMock2, error: null } as any);
+
+    jest.spyOn(database, "fetchPhoneNumbersForBooking")
+      .mockResolvedValueOnce({ data: phoneNumbersMock1, error: null } as any)
+      .mockResolvedValueOnce({ data: phoneNumbersMock2, error: null } as any);
+
+      const spy = jest.spyOn(database, "fetchAllBookingsForClient")
+  .mockResolvedValueOnce({ data: [booking1, booking2], error: null } as any);
+      
+      console.log("Spy setup result:", spy.getMockName ? spy.getMockName() : "spy set");
+console.log("Will return:", [booking1, booking2]);
+
+    // Run the function
+    const bookings = await getBookingsByClientId(clientId, userId);
+
+    console.log("Bookings returned from getBookingsByClientId:", bookings);
+
+    // Assertions
+    expect(bookings.length).toBe(2);
+
+    // booking1
+    expect(bookings[0]).toMatchObject({
+      id: 1,
+      clientId,
+      confirmation: confirmationMock1,
+      personDetails: personDetailsMock1,
+      significantDates: significantDatesMock1,
+      emailAddresses: emailAddressesMock1,
+      phoneNumbers: phoneNumbersMock1
     });
 
-    
-    const confirmationMock = { id: 10, confirmed: true };
-    const personDetailsMock = [{ id: 11, name: "Alice" }];
-    const significantDatesMock = [{ id: 12, date_type: "departure" }];
-    const emailAddressesMock = [{ id: 13, email: "a@example.com" }];
-    const phoneNumbersMock = [{ id: 14, number: "123-4567" }];
-
-    (supabase as any).mockSingle
-      .mockResolvedValue({ data: confirmationMock, error: null });
-
-    (supabase as any).mockSingle.mockResolvedValue([
-      { data: personDetailsMock, error: null },
-      { data: significantDatesMock, error: null },
-      { data: emailAddressesMock, error: null },
-      { data: phoneNumbersMock, error: null }
-    ]);
-
-    const bookings = await getBookingsByClientId(clientId, userId);
-    expect(bookings.length).toBe(2);
-    expect(bookings[0]).toMatchObject({
+    // booking2
+    expect(bookings[1]).toMatchObject({
+      id: 2,
       clientId,
-      confirmation: confirmationMock,
-      personDetails: personDetailsMock,
-      significantDates: significantDatesMock,
-      emailAddresses: emailAddressesMock,
-      phoneNumbers: phoneNumbersMock
+      confirmation: confirmationMock2,
+      personDetails: personDetailsMock2,
+      significantDates: significantDatesMock2,
+      emailAddresses: emailAddressesMock2,
+      phoneNumbers: phoneNumbersMock2
     });
   });
 });
+
+
