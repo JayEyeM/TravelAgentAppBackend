@@ -92,8 +92,8 @@ export interface BookingInput {
 //
 
 export interface BookingWithRelations extends Booking {
-  confirmations: Confirmation[];
-  people: PersonDetail[];
+  confirmations: Confirmation [];    
+  personDetails: PersonDetail[];  
   significantDates: SignificantDate[];
   emailAddresses: EmailAddress[];
   phoneNumbers: PhoneNumber[];

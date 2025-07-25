@@ -39,14 +39,11 @@ export const createCommissionHandler = factory.createHandlers(
     if (typeof body.paid !== "boolean") {
       return c.json({ message: "Missing or invalid paid status" }, 400);
     }
-    if (body.paymentDate !== null && typeof body.paymentDate !== "string") {
+    if (body.paymentDate !== null && typeof body.paymentDate !== "number") {
       return c.json({ message: "Missing or invalid paymentDate" }, 400);
     }
 
-    // Convert paymentDate to unix if present
-    if (body.paymentDate) {
-      body.paymentDate = toUnixTimestamp(body.paymentDate) as any; // if you store as Unix
-    }
+    
 
     return body;
   }),
@@ -67,16 +64,22 @@ export const createCommissionHandler = factory.createHandlers(
   }
 );
 
-//  Get all commissions for a user
+// Get all commissions for a user
 export const getAllCommissionsHandler = factory.createHandlers(async (c) => {
   const user = c.get("user");
   if (!user || !user.id) {
     return c.json({ message: "Unauthorized" }, 401);
   }
 
-  const commissions = await getAllCommissions(user.id);
-  return c.json(commissions);
+  try {
+    const commissions = await getAllCommissions(user.id);
+    return c.json(commissions);
+  } catch (error) {
+    console.error("❌ Error in getAllCommissionsHandler:", error);
+    return c.json({ message: "Failed to fetch commissions" }, 500);
+  }
 });
+
 
 // Get a single commission by ID
 export const getCommissionByIdHandler = factory.createHandlers(async (c) => {

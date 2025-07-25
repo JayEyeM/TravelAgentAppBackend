@@ -9,13 +9,15 @@ import {
   UpdateCommissionInput,
 } from "../types/commission";
 import { snakeToCamel2, camelToSnake2 } from "../utils/caseConverter2";
+import { getBookingById, getClientById } from ".";
 
 /** Get all commissions for a specific user */
 export async function getAllCommissions(userId: string): Promise<Commission[]> {
   const { data, error } = await supabase
     .from("commissions")
     .select("*")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .order("date_created", { ascending: false });
 
   if (error) {
     console.error("❌ Error fetching commissions:", error);
@@ -24,6 +26,7 @@ export async function getAllCommissions(userId: string): Promise<Commission[]> {
 
   return data ? data.map((c) => snakeToCamel2(c)) : [];
 }
+
 
 /** Get a single commission by ID (verifies ownership) */
 export async function getCommissionById(
@@ -55,8 +58,22 @@ export async function createCommission(
     return null;
   }
 
+  // Fetch booking and client details for snapshot fields
+  const booking = await getBookingById(input.bookingId, userId);
+  if (!booking) {
+    console.error(`❌ Booking ${input.bookingId} not found or unauthorized`);
+    return null;
+  }
+
+  // ✅ Fetch the client using the existing helper
+const client = await getClientById(booking.clientId, userId);
+if (!client) {
+  console.error(`❌ Client ${booking.clientId} not found or unauthorized`);
+  return null;
+}
+
   // Format the payload for Supabase
-  const formatted = {
+const formatted = {
   user_id: userId,
   booking_id: input.bookingId,
   rate: input.rate,
@@ -65,8 +82,18 @@ export async function createCommission(
   invoiced: input.invoiced,
   paid: input.paid,
   payment_date: input.paymentDate ?? null,
-  date_created: Math.floor(Date.now() / 1000), // Unix Timestamp
+  date_created: Math.floor(Date.now() / 1000),
+
+  // Snapshot fields from booking
+  client_id: booking.clientId,
+  client_name: client.clientName ?? "",
+  supplier: "", // no supplier snapshot needed for now
+  booking_travel_date: booking.travelDate,           
+  confirmation_number: "",
+  final_payment_date: booking.clientFinalPaymentDate, 
 };
+
+
 
 
   const { data, error } = await supabase
