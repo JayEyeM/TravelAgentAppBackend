@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { 
   createCommissionHandler,
   getAllCommissionsHandler,
-  getCommissionsByUserIdHandler,
+  // getCommissionsByUserIdHandler,
   getCommissionByIdHandler,
   updateCommissionByIdHandler,
   deleteCommissionByIdHandler
@@ -15,7 +15,7 @@ export const CommissionRouter = new Hono();
 CommissionRouter
   .post('/', ...createCommissionHandler)
   .get('/', ...getAllCommissionsHandler)
-  .get('/user/:userId', ...getCommissionsByUserIdHandler) // to get commissions by logged-in user
+  // .get('/user/:userId', ...getCommissionsByUserIdHandler) // to get commissions by logged-in user
   .get('/:id', ...getCommissionByIdHandler)
   .patch('/:id', ...updateCommissionByIdHandler)
   .delete('/:id', ...deleteCommissionByIdHandler);

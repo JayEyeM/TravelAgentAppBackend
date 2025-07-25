@@ -3,7 +3,7 @@
 
 import supabase from '../utils/supabase';
 import { Client } from '../types/client';
-import {Booking, BookingInput } from '../types/booking';
+import {Booking, BookingInput, BookingWithRelations } from '../types/booking';
 import { formatBookingForSupabase } from '../utils/formatBooking';
 import { Confirmation, PersonDetail, SignificantDate, EmailAddress, PhoneNumber } from '../types/booking';
 import { snakeToCamel2, camelToSnake2 } from '../utils/caseConverter2';
@@ -139,60 +139,73 @@ export async function deleteClient(id: number, userId: string): Promise<boolean>
 }
 
 /** Get all bookings along with related data */
-export async function getAllBookings(): Promise<Booking[]> {
-    const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('*');
+export async function getAllBookings(): Promise<BookingWithRelations[]> {
+  const { data: bookings, error: bookingsError } = await supabase
+    .from('bookings')
+    .select('*');
 
-    if (bookingsError) {
-        console.error('Error fetching bookings:', bookingsError);
-        return [];
-    }
+  if (bookingsError) {
+    console.error('Error fetching bookings:', bookingsError);
+    return [];
+  }
 
-    // Fetch related data for each booking (you can optimize with JOINs if needed)
-    const bookingsWithDetails = await Promise.all(bookings.map(async (booking) => {
-        const { data: confirmation, error: confirmationError } = await supabase
-            .from('confirmation')
-            .select('*')
-            .eq('bookingId', booking.id)
-            .single();
+  const bookingsWithDetails = await Promise.all(
+    bookings.map(async (booking) => {
+      const { data: confirmations, error: confirmationsError } = await supabase
+        .from('confirmations')
+        .select('*')
+        .eq('booking_id', booking.id);
 
-        const { data: personDetails, error: personDetailsError } = await supabase
-            .from('person_details')
-            .select('*')
-            .eq('bookingId', booking.id);
+      const { data: personDetails, error: personDetailsError } = await supabase
+        .from('person_details')
+        .select('*')
+        .eq('booking_id', booking.id);
 
-        const { data: significantDates, error: significantDatesError } = await supabase
-            .from('significant_dates')
-            .select('*')
-            .eq('bookingId', booking.id);
+      const { data: significantDates, error: significantDatesError } = await supabase
+        .from('significant_dates')
+        .select('*')
+        .eq('booking_id', booking.id);
 
-        const { data: emailAddresses, error: emailAddressesError } = await supabase
-            .from('email_addresses')
-            .select('*')
-            .eq('bookingId', booking.id);
+      const { data: emailAddresses, error: emailAddressesError } = await supabase
+        .from('email_addresses')
+        .select('*')
+        .eq('booking_id', booking.id);
 
-        const { data: phoneNumbers, error: phoneNumbersError } = await supabase
-            .from('phone_numbers')
-            .select('*')
-            .eq('bookingId', booking.id);
+      const { data: phoneNumbers, error: phoneNumbersError } = await supabase
+        .from('phone_numbers')
+        .select('*')
+        .eq('booking_id', booking.id);
 
-        if (confirmationError || personDetailsError || significantDatesError || emailAddressesError || phoneNumbersError) {
-            console.error('Error fetching related data:', confirmationError, personDetailsError, significantDatesError, emailAddressesError, phoneNumbersError);
-        }
+      if (
+        confirmationsError ||
+        personDetailsError ||
+        significantDatesError ||
+        emailAddressesError ||
+        phoneNumbersError
+      ) {
+        console.error('Error fetching related data:', {
+          confirmationsError,
+          personDetailsError,
+          significantDatesError,
+          emailAddressesError,
+          phoneNumbersError,
+        });
+      }
 
-        return {
-            ...booking,
-            confirmation,
-            personDetails,
-            significantDates,
-            emailAddresses,
-            phoneNumbers
-        };
-    }));
+      return {
+        ...booking,
+        confirmations: confirmations || [],
+        personDetails: personDetails || [],
+        significantDates: significantDates || [],
+        emailAddresses: emailAddresses || [],
+        phoneNumbers: phoneNumbers || [],
+      };
+    })
+  );
 
-    return bookingsWithDetails;
+  return bookingsWithDetails;
 }
+
 
 // ✅ Fetch all bookings for a specific client
 export async function fetchAllBookingsForClient(
@@ -207,13 +220,13 @@ export async function fetchAllBookingsForClient(
 // ✅ Fetch confirmation for a specific booking
 export async function fetchConfirmationForBooking(
   bookingId: number
-): Promise<PostgrestSingleResponse<any>> {
+): Promise<PostgrestSingleResponse<any[]>> {
   return supabase
-    .from("confirmation")
-    .select("*")
-    .eq("booking_id", bookingId)
-    .single();
+    .from('confirmations')
+    .select('*')
+    .eq('booking_id', bookingId);
 }
+
 
 // ✅ Fetch person details for a specific booking
 export async function fetchPersonDetailsForBooking(
@@ -289,33 +302,34 @@ export async function getBookingsByClientId(
 
   // 3️⃣ Fetch related data for each booking using the new helper functions
   const bookingsWithDetails = await Promise.all(
-    bookings.map(async (booking) => {
-      const [
-        { data: confirmation },
-        { data: personDetails },
-        { data: significantDates },
-        { data: emailAddresses },
-        { data: phoneNumbers },
-      ] = await Promise.all([
-        fetchConfirmationForBooking(booking.id),
-        fetchPersonDetailsForBooking(booking.id),
-        fetchSignificantDatesForBooking(booking.id),
-        fetchEmailAddressesForBooking(booking.id),
-        fetchPhoneNumbersForBooking(booking.id),
-      ]);
+  bookings.map(async (booking) => {
+    const [
+      { data: confirmations },
+      { data: personDetails },
+      { data: significantDates },
+      { data: emailAddresses },
+      { data: phoneNumbers },
+    ] = await Promise.all([
+      fetchConfirmationForBooking(booking.id),
+      fetchPersonDetailsForBooking(booking.id),
+      fetchSignificantDatesForBooking(booking.id),
+      fetchEmailAddressesForBooking(booking.id),
+      fetchPhoneNumbersForBooking(booking.id),
+    ]);
 
-      return {
-        ...snakeToCamel2(booking),
-        confirmation,
-        personDetails,
-        significantDates,
-        emailAddresses,
-        phoneNumbers,
-      };
-    })
-  );
+    return {
+      ...snakeToCamel2(booking),
+      confirmations: confirmations || [],
+      personDetails: personDetails || [],
+      significantDates: significantDates || [],
+      emailAddresses: emailAddresses || [],
+      phoneNumbers: phoneNumbers || [],
+    };
+  })
+);
 
-  return bookingsWithDetails;
+return bookingsWithDetails;
+
 }
 
 
@@ -360,29 +374,30 @@ console.log(`Request userId: ${userId}`);
   }
 
   const [
-    { data: confirmation },
-    { data: personDetails },
-    { data: significantDates },
-    { data: emailAddresses },
-    { data: phoneNumbers },
-  ] = await Promise.all([
-    supabase.from('confirmation').select('*').eq('booking_id', bookingId).single(),
-    supabase.from('person_details').select('*').eq('booking_id', bookingId),
-    supabase.from('significant_dates').select('*').eq('booking_id', bookingId),
-    supabase.from('email_addresses').select('*').eq('booking_id', bookingId),
-    supabase.from('phone_numbers').select('*').eq('booking_id', bookingId),
-  ]);
+  { data: confirmations },
+  { data: personDetails },
+  { data: significantDates },
+  { data: emailAddresses },
+  { data: phoneNumbers },
+] = await Promise.all([
+  supabase.from('confirmations').select('*').eq('booking_id', bookingId),
+  supabase.from('person_details').select('*').eq('booking_id', bookingId),
+  supabase.from('significant_dates').select('*').eq('booking_id', bookingId),
+  supabase.from('email_addresses').select('*').eq('booking_id', bookingId),
+  supabase.from('phone_numbers').select('*').eq('booking_id', bookingId),
+]);
 
-  const bookingCamel = snakeToCamel2(booking);
+const bookingCamel = snakeToCamel2(booking);
 
-  return {
-    ...bookingCamel,
-    confirmation,
-    personDetails,
-    significantDates,
-    emailAddresses,
-    phoneNumbers,
-  };
+return {
+  ...bookingCamel,
+  confirmations: confirmations || [],
+  personDetails: personDetails || [],
+  significantDates: significantDates || [],
+  emailAddresses: emailAddresses || [],
+  phoneNumbers: phoneNumbers || [],
+};
+
 }
 
 

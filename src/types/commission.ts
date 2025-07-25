@@ -2,26 +2,27 @@
 
 // The full Commission record stored in the database and returned from the API
 export interface Commission {
-  id: number;                   // PK
-  bookingId: number;            // FK to bookings
-  clientId: number;             // snapshot of client id for quick reference
-  clientName: string;           // snapshot of client name
-  supplier: string;             // snapshot from confirmation or booking
-  bookingTravelDate: string;    // snapshot ISO date string
-  confirmationNumber: string;   // snapshot from confirmation
-  finalPaymentDate: string;     // snapshot ISO date string
+  id: number;
+  bookingId: number;
+  clientId: number;
+  clientName: string;
+  supplier: string;
+  bookingTravelDate: number;   // ✅ Unix timestamp
+  confirmationNumber: string;
+  finalPaymentDate: number;    // ✅ Unix timestamp
 
-  rate: number;                 // commission rate %
-  commission: number;           // commission amount
-  commissionRateAmount: number; // calculated amount = commission * rate / 100
+  rate: number;
+  commission: number;
+  commissionRateAmount: number;
 
-  invoiced: boolean;            // status flags
+  invoiced: boolean;
   paid: boolean;
-  paymentDate: string | null;   // ISO date string or null
+  paymentDate: number | null;  // ✅ Unix timestamp or null
 
-  dateCreated: string;          // ISO date string for creation timestamp
-  userId: string;               // FK to users table (owner of the commission)
+  dateCreated: number;         // ✅ Unix timestamp
+  userId: string;
 }
+
 
 // Input when creating a new commission (POST /commissions)
 export interface NewCommissionInput {
@@ -30,7 +31,7 @@ export interface NewCommissionInput {
   commission: number;
   invoiced: boolean;
   paid: boolean;
-  paymentDate: string | null;
+  paymentDate: number | null;
 }
 
 // Input when updating a commission (PATCH /commissions/:id)
@@ -40,5 +41,5 @@ export interface UpdateCommissionInput {
   commission?: number;
   invoiced?: boolean;
   paid?: boolean;
-  paymentDate?: string | null;
+  paymentDate?: number | null;
 }
