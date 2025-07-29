@@ -41,5 +41,7 @@ export interface UpdateCommissionInput {
   commission?: number;
   invoiced?: boolean;
   paid?: boolean;
-  paymentDate?: number | null;
+  paymentDate?: string | null;
+  finalPaymentDate?: string | null;
+
 }

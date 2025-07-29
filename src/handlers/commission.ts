@@ -88,7 +88,7 @@ export const getCommissionByIdHandler = factory.createHandlers(async (c) => {
     return c.json({ message: "Commission ID is required" }, 400);
   }
 
-  const id = parseInt(idParam, 10);
+  const id = Number(idParam);
   if (isNaN(id)) {
     return c.json({ message: "Invalid commission ID" }, 400);
   }
@@ -103,10 +103,11 @@ export const getCommissionByIdHandler = factory.createHandlers(async (c) => {
     return c.json({ message: "Commission not found" }, 404);
   }
 
-  return c.json(commission);
+  return c.json(commission, 200);
 });
 
-//  Update a commission by ID
+
+// Update a commission by ID
 export const updateCommissionByIdHandler = factory.createHandlers(async (c) => {
   const user = c.get("user");
   if (!user || !user.id) {
@@ -134,6 +135,7 @@ export const updateCommissionByIdHandler = factory.createHandlers(async (c) => {
   if (body.paid !== undefined && typeof body.paid !== "boolean") {
     return c.json({ message: "Invalid paid status" }, 400);
   }
+
   if (
     body.paymentDate !== undefined &&
     body.paymentDate !== null &&
@@ -142,8 +144,21 @@ export const updateCommissionByIdHandler = factory.createHandlers(async (c) => {
     return c.json({ message: "Invalid paymentDate" }, 400);
   }
 
+  if (
+    body.finalPaymentDate !== undefined &&
+    body.finalPaymentDate !== null &&
+    typeof body.finalPaymentDate !== "string"
+  ) {
+    return c.json({ message: "Invalid finalPaymentDate" }, 400);
+  }
+
+  // Convert date strings to Unix timestamps
   if (body.paymentDate) {
-    body.paymentDate = toUnixTimestamp(body.paymentDate) as any; 
+    body.paymentDate = toUnixTimestamp(body.paymentDate) as any;
+  }
+
+  if (body.finalPaymentDate) {
+    body.finalPaymentDate = toUnixTimestamp(body.finalPaymentDate) as any;
   }
 
   const updated = await updateCommission(id, userId, body);
@@ -153,6 +168,7 @@ export const updateCommissionByIdHandler = factory.createHandlers(async (c) => {
 
   return c.json(updated);
 });
+
 
 //  Delete a commission by ID
 export const deleteCommissionByIdHandler = factory.createHandlers(async (c) => {
