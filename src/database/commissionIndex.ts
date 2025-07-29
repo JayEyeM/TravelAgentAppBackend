@@ -38,15 +38,20 @@ export async function getCommissionById(
     .select("*")
     .eq("id", id)
     .eq("user_id", userId)
-    .single();
+    .maybeSingle(); // ✅ prevents throwing an error if not found
 
   if (error) {
     console.error(`❌ Error fetching commission ${id}:`, error);
     return null;
   }
 
-  return data ? snakeToCamel2(data) : null;
+  if (!data) {
+    return null; // ✅ explicitly handle not found
+  }
+
+  return snakeToCamel2(data) as Commission;
 }
+
 
 /** Create a new commission */
 export async function createCommission(
@@ -140,21 +145,29 @@ export async function updateCommission(
   return data ? snakeToCamel2(data) : null;
 }
 
+
 /** Delete a commission */
 export async function deleteCommission(
   id: number,
   userId: string
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("commissions")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select(); // 👈 This ensures we get back the deleted row(s)
 
   if (error) {
     console.error(`❌ Error deleting commission ${id}:`, error);
     return false;
   }
 
+  // If no rows were deleted, it means the commission wasn't found or didn't belong to the user
+  if (!data || data.length === 0) {
+    return false;
+  }
+
   return true;
 }
+
