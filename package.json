@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "win-int-test": "powershell -executionpolicy bypass -File .\\integration-test.ps1",
     "test": "jest",
-    "deploy": "npm run build && node dist/index.js"
+    "deploy": "npm run build && node dist/index.js",
+    "linux-int-test": "./integration-test.sh"
 
   },
   "jest": {
