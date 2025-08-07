@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: Production_Integration_Test
 
     steps:
       - name: Checkout repository
@@ -27,5 +28,18 @@ jobs:
       - name: Build Project
         run: npm run build
 
-      - name: Run Tests
-        run: npm test
+      #   - name: Run Tests
+      #     run: npm test
+
+      - name: Install Postman CLI
+        run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+
+      - name: Delay 5 minutes
+        run: sleep 150
+
+      - name: Run Integration Tests
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          POSTMAN_COLLECTION: ${{ secrets.POSTMAN_COLLECTION }}
+          POSTMAN_ENV: ${{ secrets.POSTMAN_ENV }}
+        run: npm run linux-int-test
