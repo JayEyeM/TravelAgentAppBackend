@@ -9,9 +9,11 @@
     "isolatedModules": false,
     "types": [
       "node",
-      "jest",
+      "jest"
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-  }
+    "outDir": "dist"           
+  },
+  "include": ["src"]
 }

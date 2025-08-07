@@ -31,3 +31,6 @@ lerna-debug.log*
 src/data/clients.json
 
 dist/
+
+src/**/*.js
+
