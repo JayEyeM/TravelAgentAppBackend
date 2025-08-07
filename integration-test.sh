@@ -1,5 +1,7 @@
 #!/bin/bash
-
+echo $POSTMAN_API_KEY
+echo $POSTMAN_COLLECTION
+echo $POSTMAN_ENV
 # Check if required environment variables are set
 if [[ -z "$POSTMAN_API_KEY" || -z "$POSTMAN_COLLECTION" || -z "$POSTMAN_ENV" ]]; then
     echo "Error: Environment variables POSTMAN_API_KEY, POSTMAN_COLLECTION, and/or POSTMAN_ENV are not set." >&2
