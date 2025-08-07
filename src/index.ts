@@ -57,7 +57,7 @@ app.use('*', async (c, next) => {
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://your-frontend-url.onrender.com',
+  'https://travel-agent-app.onrender.com',
   // add any other allowed frontend URLs here
 ];
 
