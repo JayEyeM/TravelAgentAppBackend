@@ -35,7 +35,10 @@ jobs:
         run: curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
 
       - name: Delay 5 minutes
-        run: sleep 150
+        run: sleep 30
+
+      - name: set permission
+        run: chmod +x ./integration-test.sh
 
       - name: Run Integration Tests
         env:
