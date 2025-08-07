@@ -7,7 +7,7 @@
             "name": "Launch Backend",
             "runtimeExecutable": "npx",
             "runtimeArgs": ["tsx"],
-            "args": ["src/index.ts"], // Replace with your entry file
+            "args": ["src/index.ts"], 
             "skipFiles": ["<node_internals>/**"]
         },
     ]
