@@ -1,3 +1,5 @@
+//File path: src/routers/authRoutes.ts 
+
 import { Hono } from "hono";
 import supabase from "../utils/supabase"; 
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie';

@@ -2,9 +2,13 @@
   "name": "travel-agent-backend",
   "private": true,
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "win-int-test": "powershell -executionpolicy bypass -File .\\integration-test.ps1",
-    "test": "jest"
+    "test": "jest",
+    "deploy": "npm run build && node dist/index.js"
+
   },
   "jest": {
     "preset": "ts-jest",
