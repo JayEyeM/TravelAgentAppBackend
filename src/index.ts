@@ -55,8 +55,18 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://your-frontend-url.onrender.com',
+  // add any other allowed frontend URLs here
+];
+
 app.use('*', cors({
-  origin: 'http://localhost:5173',
+  origin: (origin, c) => {
+  if (!origin) return null;
+  if (allowedOrigins.includes(origin)) return origin;
+  return null;
+},
   credentials: true,
   allowHeaders: [
     'Content-Type',
