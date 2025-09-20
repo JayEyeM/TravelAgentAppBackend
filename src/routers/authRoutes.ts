@@ -25,12 +25,13 @@ authRoutes.post("/login", async (c) => {
 
   // Set cookie (valid for 24 hours)
   setCookie(c, 'session', token, {
-    httpOnly: true,        
-    secure: process.env.NODE_ENV?.trim() === 'production',
-    sameSite: 'strict',    
-    maxAge: 86400, // 24 hours
-    path: '/'              
-  });
+  httpOnly: true,
+  secure: process.env.NODE_ENV?.trim() === 'production',
+  sameSite: process.env.NODE_ENV?.trim() === 'production' ? 'none' : 'lax', // 'lax' works for localhost
+  maxAge: 86400,
+  path: '/',
+});
+
 
   return c.json({ 
     message: "Login successful!",

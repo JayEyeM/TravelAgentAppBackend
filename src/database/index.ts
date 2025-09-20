@@ -1,17 +1,22 @@
-//File: src/database/index.ts
-//This file contains functions to interact with the Supabase database for managing clients and bookings.
+// File: src/database/index.ts
+// This file contains functions to interact with the Supabase database for managing clients and bookings.
 
 import supabase from '../utils/supabase';
 import { Client } from '../types/client';
-import {Booking, BookingInput, BookingWithRelations } from '../types/booking';
+import { Booking, BookingInput, BookingWithRelations } from '../types/booking';
 import { formatBookingForSupabase } from '../utils/formatBooking';
 import { Confirmation, PersonDetail, SignificantDate, EmailAddress, PhoneNumber } from '../types/booking';
 import { snakeToCamel2, camelToSnake2 } from '../utils/caseConverter2';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostgrestSingleResponse } from '@supabase/supabase-js';
 
+// Helper to use provided Supabase client or default global one
+const getClient = (sb?: SupabaseClient) => sb || supabase;
+
 /** Get all clients */
-export async function getAllClients(userId: string): Promise<Client[]> {
-    const { data, error } = await supabase
+export async function getAllClients(userId: string, sb?: SupabaseClient): Promise<Client[]> {
+    const client = getClient(sb);
+    const { data, error } = await client
         .from('clients')
         .select('*')
         .eq('user_id', userId);
@@ -21,22 +26,17 @@ export async function getAllClients(userId: string): Promise<Client[]> {
         return [];
     }
 
-    // Convert each client object to camelCase before returning
-    if (data) {
-        return data.map(client => snakeToCamel2(client));
-    } else {
-        return [];
-    }
+    return data ? data.map(c => snakeToCamel2(c)) : [];
 }
 
-
 /** Get a single client by ID */
-export async function getClientById(id: number, user_id: string): Promise<Client | null> {
-    const { data, error } = await supabase
+export async function getClientById(id: number, userId: string, sb?: SupabaseClient): Promise<Client | null> {
+    const client = getClient(sb);
+    const { data, error } = await client
         .from('clients')
         .select('*')
         .eq('id', id)
-        .eq('user_id', user_id)
+        .eq('user_id', userId)
         .single();
 
     if (error) {
@@ -44,91 +44,88 @@ export async function getClientById(id: number, user_id: string): Promise<Client
         return null;
     }
 
-    if (!data) {
-      return null;
-    }
-
-    return snakeToCamel2(data);
+    return data ? snakeToCamel2(data) : null;
 }
 
-
 /** Create a new client */
-export async function createClient(client: Omit<Client, 'id' | 'dateCreated'>): Promise<Client | null> {
-    if (!client.userId) {
+export async function createClient(
+  clientData: Omit<Client, 'id' | 'dateCreated'>,
+  sb?: SupabaseClient
+): Promise<Client | null> {
+    const client = getClient(sb);
+
+    if (!clientData.userId) {
         console.error("❌ Error: userId is missing!");
         return null;
     }
 
     const formattedClient = {
-        user_id: client.userId, // Ensure this is included
-        client_name: client.clientName,
-        client_email: client.clientEmail,
-        client_phone: client.clientPhone,
-        client_postal_code: client.clientPostalCode,
-        client_street_address: client.clientStreetAddress,
-        client_city: client.clientCity,
-        client_province: client.clientProvince,
-        client_country: client.clientCountry,
-        notes: client.notes,
-        payment_date: client.paymentDate ?? null,
-        final_payment_date: client.finalPaymentDate ?? null,
-        date_created: Math.floor(Date.now() / 1000), // Store as Unix Timestamp
+        user_id: clientData.userId,
+        client_name: clientData.clientName,
+        client_email: clientData.clientEmail,
+        client_phone: clientData.clientPhone,
+        client_postal_code: clientData.clientPostalCode,
+        client_street_address: clientData.clientStreetAddress,
+        client_city: clientData.clientCity,
+        client_province: clientData.clientProvince,
+        client_country: clientData.clientCountry,
+        notes: clientData.notes,
+        payment_date: clientData.paymentDate ?? null,
+        final_payment_date: clientData.finalPaymentDate ?? null,
+        date_created: Math.floor(Date.now() / 1000),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await client
         .from('clients')
         .insert([formattedClient])
         .select()
         .single();
 
-        console.log('DEBUG createClient supabase insert data:', data);
+    console.log('DEBUG createClient supabase insert data:', data);
     console.log('DEBUG createClient supabase insert error:', error);
 
-     if (data) {
-    const camelClient = snakeToCamel2(data);
-    console.log("✅ Client successfully created (camelCase):", camelClient);
-    return camelClient;
-  } else {
-    return null;
-  }
+    return data ? snakeToCamel2(data) : null;
 }
 
-
-
+/** Update a client */
 export async function updateClient(
   clientId: number,
   userId: string,
-  updatedClient: Partial<Client>
+  updatedClient: Partial<Client>,
+  sb?: SupabaseClient
 ): Promise<Client | null> {
-  const formattedClient = camelToSnake2(updatedClient);
+    const client = getClient(sb);
+    const formattedClient = camelToSnake2(updatedClient);
 
-  const { data, error } = await supabase
-    .from('clients')
-    .update(formattedClient)
-    .eq('id', clientId)
-    .eq('user_id', userId)
-    .select()
-    .single();
+    const { data, error } = await client
+        .from('clients')
+        .update(formattedClient)
+        .eq('id', clientId)
+        .eq('user_id', userId)
+        .select()
+        .single();
 
-  if (error) {
-    console.error(`Error updating client ${clientId}:`, error);
-    return null;
-  }
+    if (error) {
+        console.error(`Error updating client ${clientId}:`, error);
+        return null;
+    }
 
-  return data ? snakeToCamel2(data) : null;
+    return data ? snakeToCamel2(data) : null;
 }
 
-
-
 /** Delete a client */
-export async function deleteClient(id: number, userId: string): Promise<boolean>
- {
-    const { error } = await supabase
+export async function deleteClient(
+  id: number,
+  userId: string,
+  sb?: SupabaseClient
+): Promise<boolean> {
+    const client = getClient(sb);
+
+    const { error } = await client
         .from('clients')
         .delete()
-.eq('id', id)
-.eq('user_id', userId) // Pass userId as an arg
-
+        .eq('id', id)
+        .eq('user_id', userId);
 
     if (error) {
         console.error(`Error deleting client ${id}:`, error);
@@ -137,6 +134,7 @@ export async function deleteClient(id: number, userId: string): Promise<boolean>
 
     return true;
 }
+
 
 /** Get all bookings along with related data */
 export async function getAllBookings(): Promise<BookingWithRelations[]> {
@@ -428,6 +426,9 @@ export async function createBooking(
     .insert([formattedBooking])
     .select()
     .single();
+
+    console.log('Booking insert result:', insertedBooking);
+console.log('Booking insert error:', bookingError);
 
   if (bookingError || !insertedBooking) {
     console.error('Error creating booking:', bookingError);

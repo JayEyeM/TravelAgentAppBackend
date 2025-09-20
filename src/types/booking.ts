@@ -19,9 +19,9 @@ export interface Booking {
   referenceCode: string; // This is like a custom short identifier you display (e.g. "REF-291X")
   amount: number;
   notes: string;
-  invoiced: boolean;
-  paid: boolean;
-  paymentDate: UnixTimestamp;
+  invoiced?: boolean;
+  paid?: boolean;
+  paymentDate?: UnixTimestamp;
   dateCreated: UnixTimestamp;
 }
 

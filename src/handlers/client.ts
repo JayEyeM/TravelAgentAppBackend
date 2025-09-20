@@ -2,18 +2,39 @@ import { createFactory } from "hono/factory";
 import { validator } from "hono/validator";
 import { Client } from "../types/client";
 import {
-  createClient,
-  getAllClients,
-  getClientById,
-  updateClient,
-  deleteClient,
+  createClient as dbCreateClient,
+  getAllClients as dbGetAllClients,
+  getClientById as dbGetClientById,
+  updateClient as dbUpdateClient,
+  deleteClient as dbDeleteClient,
 } from "../database";
-import type { Context } from "hono";
-import type { AuthenticatedUser } from "../types/user";
+import type { MiddlewareHandler, Context } from "hono";
 import { snakeToCamel2, camelToSnake2 } from "../utils/caseConverter2";
-
+import { createClient } from '@supabase/supabase-js';
+import supabase from '../utils/supabase';
 
 const factory = createFactory();
+
+// Helper to get a Supabase client for the current request
+const supabaseWithToken = (token: string) => {
+  return createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    }
+  );
+};
+
+// --- Helper to get user & token from context ---
+const getUserAndToken = (c: Context) => {
+  const user = c.get<any>("user");
+  const token = c.get<any>("userToken") as string;
+  if (!user || !token) throw new Error("Missing user or token in context");
+  return { user, token };
+};
 
 // Create a new client
 export const createClientHandler = factory.createHandlers(
@@ -32,12 +53,11 @@ export const createClientHandler = factory.createHandlers(
   }),
   async (c) => {
     try {
-      const user = c.get("user");
+      const { user, token } = getUserAndToken(c);
       console.log("Creating client for user:", user);
 
       const body = await c.req.valid("json");
 
-      // Compose the client data object in camelCase for createClient
       const clientData = {
         ...body,
         userId: user.id,
@@ -49,7 +69,8 @@ export const createClientHandler = factory.createHandlers(
 
       console.log("clientData before createClient:", clientData);
 
-      const newClient = await createClient(clientData);
+      const supabaseReq = supabaseWithToken(token);
+      const newClient = await dbCreateClient(clientData, supabaseReq);
 
       console.log("Client created:", newClient);
       return c.json(newClient, 201);
@@ -63,18 +84,14 @@ export const createClientHandler = factory.createHandlers(
   }
 );
 
-
-// Get all clients for the current user
+// Get all clients
 export const getAllClientsHandler = factory.createHandlers(async (c) => {
-  console.log("Fetching all clients...");
-
   try {
-    const user = c.get("user");
+    const { user, token } = getUserAndToken(c);
 
-    console.log("User:", user);
+    const supabaseReq = supabaseWithToken(token);
+    const clients = await dbGetAllClients(user.id, supabaseReq);
 
-    const clients = await getAllClients(user.id);
-    
     return c.json(clients);
   } catch (error) {
     console.error("Error fetching clients:", error);
@@ -82,97 +99,73 @@ export const getAllClientsHandler = factory.createHandlers(async (c) => {
   }
 });
 
-// Get a single client by ID
+// Get single client by ID
 export const getClientByIdHandler = factory.createHandlers(async (c) => {
   try {
-    const user = c.get("user");
+    const { user, token } = getUserAndToken(c);
     const id = c.req.param("id");
 
     if (!id || isNaN(Number(id))) {
       return c.json({ error: "Valid client ID is required" }, 400);
     }
 
-    const client = await getClientById(Number(id), user.id);
+    const supabaseReq = supabaseWithToken(token);
+    const client = await dbGetClientById(Number(id), user.id, supabaseReq);
 
-    if (!client) {
-      return c.json({ error: "Client not found" }, 404);
-    }
+    if (!client) return c.json({ error: "Client not found" }, 404);
 
     return c.json(client);
   } catch (error) {
     console.error("Error fetching client:", error);
-    return c.json(
-      { error: "An error occurred while fetching the client" },
-      500
-    );
+    return c.json({ error: "An error occurred while fetching the client" }, 500);
   }
 });
 
-
-// Update a client by ID (only if owned by user)
+// Update client by ID
 export const updateClientByIdHandler = factory.createHandlers(async (c) => {
   try {
-    const user = c.get("user");
+    const { user, token } = getUserAndToken(c);
     const id = c.req.param("id");
 
-    if (!id || isNaN(Number(id))) {
-      return c.json({ error: "Valid client ID is required" }, 400);
-    }
+    if (!id || isNaN(Number(id))) return c.json({ error: "Valid client ID is required" }, 400);
 
-    // Ensure the client exists and belongs to the user
-    const existingClient = await getClientById(Number(id), user.id);
-    if (!existingClient) {
-      return c.json({ error: "Client not found or unauthorized" }, 404);
-    }
+    const supabaseReq = supabaseWithToken(token);
+    const existingClient = await dbGetClientById(Number(id), user.id, supabaseReq);
 
-    // Read and pass the body as camelCase (handled internally)
+    if (!existingClient) return c.json({ error: "Client not found or unauthorized" }, 404);
+
     const body = await c.req.json<Partial<Client>>();
-    const updatedClient = await updateClient(Number(id), user.id, body);
+    const updatedClient = await dbUpdateClient(Number(id), user.id, body, supabaseReq);
 
-    if (!updatedClient) {
-      return c.json({ error: "Failed to update client" }, 500);
-    }
+    if (!updatedClient) return c.json({ error: "Failed to update client" }, 500);
 
     return c.json(updatedClient);
   } catch (error) {
     console.error("Error updating client:", error);
-    return c.json(
-      { error: "An error occurred while updating the client" },
-      500
-    );
+    return c.json({ error: "An error occurred while updating the client" }, 500);
   }
 });
 
-
-// Delete a client by ID (only if owned by user)
+// Delete client by ID
 export const deleteClientByIdHandler = factory.createHandlers(async (c) => {
   try {
-    const user = c.get("user");
-
+    const { user, token } = getUserAndToken(c);
     const id = c.req.param("id");
 
-    if (!id || isNaN(Number(id))) {
-      return c.json({ error: "Valid client ID is required" }, 400);
-    }
+    if (!id || isNaN(Number(id))) return c.json({ error: "Valid client ID is required" }, 400);
 
-    const existingClient = await getClientById(Number(id), user.id);
-    if (!existingClient) {
-      return c.json({ error: "Client not found or unauthorized" }, 404);
-    }
+    const supabaseReq = supabaseWithToken(token);
+    const existingClient = await dbGetClientById(Number(id), user.id, supabaseReq);
 
-    const deleted = await deleteClient(Number(id), user.id);
+    if (!existingClient) return c.json({ error: "Client not found or unauthorized" }, 404);
 
-    if (!deleted) {
-      return c.json({ error: "Client could not be deleted" }, 500);
-    }
+    const deleted = await dbDeleteClient(Number(id), user.id, supabaseReq);
 
+    if (!deleted) return c.json({ error: "Client could not be deleted" }, 500);
 
     return c.json({ message: "Client deleted successfully" });
   } catch (error) {
     console.error("Error deleting client:", error);
-    return c.json(
-      { error: "An error occurred while deleting the client" },
-      500
-    );
+    return c.json({ error: "An error occurred while deleting the client" }, 500);
   }
 });
