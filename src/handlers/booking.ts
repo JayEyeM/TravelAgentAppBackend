@@ -17,141 +17,106 @@ import { toUnixTimestamp } from '../utils/toUnixConverter';
 const factory = createFactory();
 
 // Create a new booking
-export const createBookingHandler = factory.createHandlers(validator('json', (value, c) => {
-  // Convert booking date strings to Unix timestamps
-  value.booking.travelDate = toUnixTimestamp(value.booking.travelDate);
-  value.booking.bookingDate = toUnixTimestamp(value.booking.bookingDate);
-  value.booking.invoicedDate = toUnixTimestamp(value.booking.invoicedDate);
-  value.booking.clientFinalPaymentDate = toUnixTimestamp(value.booking.clientFinalPaymentDate);
-  value.booking.supplierFinalPaymentDate = toUnixTimestamp(value.booking.supplierFinalPaymentDate);
-  value.booking.paymentDate = toUnixTimestamp(value.booking.paymentDate);
-  value.booking.dateCreated = toUnixTimestamp(value.booking.dateCreated);
+export const createBookingHandler = factory.createHandlers(
+  validator('json', (value, c) => {
+    // Convert booking date strings to Unix timestamps
+    value.booking.travelDate = toUnixTimestamp(value.booking.travelDate);
+    value.booking.bookingDate = toUnixTimestamp(value.booking.bookingDate);
+    value.booking.invoicedDate = toUnixTimestamp(value.booking.invoicedDate);
+    value.booking.clientFinalPaymentDate = toUnixTimestamp(value.booking.clientFinalPaymentDate);
+    value.booking.supplierFinalPaymentDate = toUnixTimestamp(value.booking.supplierFinalPaymentDate);
+    value.booking.paymentDate = toUnixTimestamp(value.booking.paymentDate);
+    value.booking.dateCreated = toUnixTimestamp(value.booking.dateCreated);
 
-  // Convert people.dateOfBirth to Unix
-  if (Array.isArray(value.relatedData?.personDetails)) {
-    value.relatedData.personDetails = value.relatedData.personDetails.map((person: any) => ({
-      ...person,
-      dateOfBirth: toUnixTimestamp(person.dateOfBirth),
-    }));
+    // Convert personDetails.dateOfBirth to Unix
+    if (Array.isArray(value.relatedData?.personDetails)) {
+      value.relatedData.personDetails = value.relatedData.personDetails.map((person: any) => ({
+        ...person,
+        dateOfBirth: toUnixTimestamp(person.dateOfBirth),
+      }));
+    }
+
+    // Convert significantDates to Unix
+    if (Array.isArray(value.relatedData?.significantDates)) {
+      value.relatedData.significantDates = value.relatedData.significantDates.map((dateObj: any) => ({
+        ...dateObj,
+        date: toUnixTimestamp(dateObj.date),
+      }));
+    }
+
+    const b = value.booking;
+
+    // Validate booking fields
+    if (!b.travelDate || typeof b.travelDate !== 'number') return c.json({ message: 'Missing or invalid travel date' }, 400);
+    if (!b.clientFinalPaymentDate || typeof b.clientFinalPaymentDate !== 'number') return c.json({ message: 'Missing or invalid client final payment date' }, 400);
+    if (!b.supplierFinalPaymentDate || typeof b.supplierFinalPaymentDate !== 'number') return c.json({ message: 'Missing or invalid supplier final payment date' }, 400);
+    if (!b.bookingDate || typeof b.bookingDate !== 'number') return c.json({ message: 'Missing or invalid booking date' }, 400);
+    if (!b.invoicedDate || typeof b.invoicedDate !== 'number') return c.json({ message: 'Missing or invalid invoiced date' }, 400);
+
+    // Validate confirmations
+    console.log('Validator sees confirmations:', value.relatedData?.confirmations);
+
+    if (!Array.isArray(value.relatedData?.confirmations) || 
+        !value.relatedData.confirmations.every((c: any) => 
+          typeof c.confirmationNumber === 'string' && typeof c.supplier === 'string'
+        )) {
+      return c.json({ message: 'Missing or invalid confirmations' }, 400);
+    }
+
+    // Validate personDetails
+    if (!Array.isArray(value.relatedData?.personDetails) || 
+        !value.relatedData.personDetails.every((person: any) => 
+          typeof person.name === 'string' && typeof person.dateOfBirth === 'number'
+        )) {
+      return c.json({ message: 'Missing or invalid people details' }, 400);
+    }
+
+    // Validate phoneNumbers
+    if (!Array.isArray(value.relatedData?.phoneNumbers) || 
+        !value.relatedData.phoneNumbers.every((phone: any) => typeof phone.phone === 'string')) {
+      return c.json({ message: 'Missing or invalid phone numbers' }, 400);
+    }
+
+    // Validate emailAddresses
+    if (!Array.isArray(value.relatedData?.emailAddresses) || 
+        !value.relatedData.emailAddresses.every((email: any) => typeof email.email === 'string')) {
+      return c.json({ message: 'Missing or invalid email addresses' }, 400);
+    }
+
+    // Validate significantDates
+    if (!Array.isArray(value.relatedData?.significantDates) || 
+        !value.relatedData.significantDates.every((dateObj: any) => typeof dateObj.date === 'number')) {
+      return c.json({ message: 'Missing or invalid significant dates' }, 400);
+    }
+
+    // Validate other booking fields
+    if (typeof b.amount !== 'number') return c.json({ message: 'Missing or invalid amount' }, 400);
+    if (typeof b.notes !== 'string') return c.json({ message: 'Missing or invalid notes' }, 400);
+    if (typeof b.invoiced !== 'boolean') return c.json({ message: 'Missing or invalid invoiced status' }, 400);
+    if (typeof b.paid !== 'boolean') return c.json({ message: 'Missing or invalid paid status' }, 400);
+    if (typeof b.paymentDate !== 'number' && b.paymentDate !== null) return c.json({ message: 'Missing or invalid payment date' }, 400);
+    if (typeof b.dateCreated !== 'number') return c.json({ message: 'Missing or invalid date created' }, 400);
+
+    return value;
+  }),
+  async (c) => {
+    const body = await c.req.valid('json') as any;
+
+    const relatedData = {
+      confirmations: body.relatedData.confirmations,
+      personDetails: body.relatedData.personDetails,
+      significantDates: body.relatedData.significantDates,
+      emailAddresses: body.relatedData.emailAddresses,
+      phoneNumbers: body.relatedData.phoneNumbers,
+    };
+
+    const newBooking = await createBooking(body.booking, relatedData);
+    console.log('New booking result:', newBooking);
+
+    return c.json(newBooking, 201);
   }
+);
 
-  // Convert significantDates to Unix
-  if (Array.isArray(value.relatedData?.significantDates)) {
-    value.relatedData.significantDates = value.relatedData.significantDates.map((dateObj: any) => ({
-      ...dateObj,
-      date: toUnixTimestamp(dateObj.date),
-    }));
-  }
-
-  // Validate required fields in booking
-  const b = value.booking;
-
-  if (!b.travelDate || typeof b.travelDate !== 'number') {
-    return c.json({ message: 'Missing or invalid travel date' }, 400);
-  }
-
-  if (!b.clientFinalPaymentDate || typeof b.clientFinalPaymentDate !== 'number') {
-    return c.json({ message: 'Missing or invalid client final payment date' }, 400);
-  }
-
-  if (!b.supplierFinalPaymentDate || typeof b.supplierFinalPaymentDate !== 'number') {
-    return c.json({ message: 'Missing or invalid supplier final payment date' }, 400);
-  }
-
-  if (!b.bookingDate || typeof b.bookingDate !== 'number') {
-    return c.json({ message: 'Missing or invalid booking date' }, 400);
-  }
-
-  if (!b.invoicedDate || typeof b.invoicedDate !== 'number') {
-    return c.json({ message: 'Missing or invalid invoiced date' }, 400);
-  }
-
-  console.log('relatedData.confirmation:', value.relatedData?.confirmation);
-
-  // Confirmation
-  if (!Array.isArray(value.relatedData?.confirmation) || !value.relatedData.confirmation.every((c: any) =>
-  typeof c.confirmationNumber === 'string' &&
-  typeof c.supplier === 'string'
-)) {
-  return c.json({ message: 'Missing or invalid confirmations' }, 400);
-}
-
-
-  // Person Details
-  if (!Array.isArray(value.relatedData?.personDetails) || !value.relatedData.personDetails.every((person: any) =>
-  typeof person.name === 'string' &&
-  typeof person.dateOfBirth === 'number'
-)) {
-  return c.json({ message: 'Missing or invalid people details' }, 400);
-}
-
-
-  // Phone Numbers
-  if (!Array.isArray(value.relatedData?.phoneNumbers) ||
-    !value.relatedData.phoneNumbers.every((phone: any) =>
-      typeof phone.phone === 'string'
-    )
-  ) {
-    return c.json({ message: 'Missing or invalid phone numbers' }, 400);
-  }
-
-  // Email Addresses
-  if (!Array.isArray(value.relatedData?.emailAddresses) ||
-    !value.relatedData.emailAddresses.every((email: any) =>
-      typeof email.email === 'string'
-    )
-  ) {
-    return c.json({ message: 'Missing or invalid email addresses' }, 400);
-  }
-
-  // Significant Dates
-  if (!Array.isArray(value.relatedData?.significantDates) || !value.relatedData.significantDates.every((dateObj: any) =>
-  typeof dateObj.date === 'number'
-)) {
-  return c.json({ message: 'Missing or invalid significant dates' }, 400);
-}
-
-
-  if (typeof b.amount !== 'number') {
-    return c.json({ message: 'Missing or invalid amount' }, 400);
-  }
-
-  if (typeof b.notes !== 'string') {
-    return c.json({ message: 'Missing or invalid notes' }, 400);
-  }
-
-  if (typeof b.invoiced !== 'boolean') {
-    return c.json({ message: 'Missing or invalid invoiced status' }, 400);
-  }
-
-  if (typeof b.paid !== 'boolean') {
-    return c.json({ message: 'Missing or invalid paid status' }, 400);
-  }
-
-  if (typeof b.paymentDate !== 'number' && b.paymentDate !== null) {
-    return c.json({ message: 'Missing or invalid payment date' }, 400);
-  }
-
-  if (typeof b.dateCreated !== 'number') {
-    return c.json({ message: 'Missing or invalid date created' }, 400);
-  }
-
-  return value;
-}), async (c) => {
-  const body = await c.req.valid('json') as any;
-  const relatedData = {
-    confirmations: body.relatedData.confirmation,
-    personDetails: body.relatedData.personDetails,
-    significantDates: body.relatedData.significantDates,
-    emailAddresses: body.relatedData.emailAddresses,
-    phoneNumbers: body.relatedData.phoneNumbers,
-  };
-
-  const newBooking = await createBooking(body.booking, relatedData);
-  console.log('New booking result:', newBooking);
-
-  return c.json(newBooking, 201);
-});
 
 
 

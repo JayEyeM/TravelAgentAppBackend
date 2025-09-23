@@ -349,27 +349,27 @@ export async function getBookingById(
     return null;
   }
 
-  const clientId = booking.client_id;
+  // const clientId = booking.client_id;
 
-  const { data: client, error: clientError } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('id', clientId)
-    .single();
+  // const { data: client, error: clientError } = await supabase
+  //   .from('clients')
+  //   .select('*')
+  //   .eq('id', clientId)
+  //   .single();
 
-  if (clientError || !client) {
-    console.error(`❌ Error fetching client ${clientId}:`, clientError);
-    return null;
-  }
+  // if (clientError || !client) {
+  //   console.error(`❌ Error fetching client ${clientId}:`, clientError);
+  //   return null;
+  // }
 
   console.log(`Booking client_id: ${booking.client_id}`);
-console.log(`Client user_id: ${client.user_id}`);
+// console.log(`Client user_id: ${client.user_id}`);
 console.log(`Request userId: ${userId}`);
 
-  if (client.user_id !== userId) {
-    console.warn(`⚠️ Unauthorized access attempt by user ${userId} for booking ${bookingId}`);
-    return null;
-  }
+  // if (client.user_id !== userId) {
+  //   console.warn(`⚠️ Unauthorized access attempt by user ${userId} for booking ${bookingId}`);
+  //   return null;
+  // }
 
   const [
   { data: confirmations },
